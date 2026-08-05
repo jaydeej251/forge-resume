@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces, Geist_Mono } from "next/font/google";
 import { ResumeProvider } from "@/context/ResumeContext";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const uiSans = DM_Sans({
@@ -37,6 +38,7 @@ export default function RootLayout({
     >
       <body className="min-h-dvh flex flex-col antialiased" suppressHydrationWarning>
         <ResumeProvider>{children}</ResumeProvider>
+        <Analytics />
       </body>
     </html>
   );
