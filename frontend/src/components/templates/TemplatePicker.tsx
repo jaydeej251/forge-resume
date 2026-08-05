@@ -62,16 +62,32 @@ export function TemplatePicker() {
   return (
     <div className="picker-shell min-h-dvh overflow-auto">
       <div className="mx-auto flex w-full max-w-5xl flex-col px-4 py-10 sm:px-6 sm:py-14">
-        <header className="max-w-2xl">
-          <Link
-            href="/"
-            className="font-display text-3xl font-semibold tracking-tight text-[var(--ink)] transition hover:text-[var(--accent)] sm:text-4xl"
-          >
-            Forge Resume
-          </Link>
-          <p className="mt-2 text-base text-[var(--ink-soft)] sm:text-lg">
-            Choose a template, then draft with AI and fine-tune on the live canvas.
-          </p>
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <Link
+              href="/"
+              className="font-display text-3xl font-semibold tracking-tight text-[var(--ink)] transition hover:text-[var(--accent)] sm:text-4xl"
+            >
+              Forge Resume
+            </Link>
+            <p className="mt-2 text-base text-[var(--ink-soft)] sm:text-lg">
+              Choose a template, then draft with AI and fine-tune on the live canvas.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <Link
+              href="/dashboard"
+              className="cursor-pointer text-sm font-semibold text-[var(--accent)]"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/login"
+              className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--ink-soft)]"
+            >
+              Sign in
+            </Link>
+          </div>
         </header>
 
         {hasDraft && (

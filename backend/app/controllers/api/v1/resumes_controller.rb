@@ -1,10 +1,17 @@
 module Api
   module V1
     class ResumesController < ApplicationController
+      before_action :authenticate_user!, only: [ :index ]
       before_action :set_resume, only: [ :show, :update ]
+
+      def index
+        resumes = current_user.resumes.order(updated_at: :desc)
+        render json: { resumes: resumes.map { |resume| ResumeResponse.summary(resume) } }
+      end
 
       def create
         resume = Resume.new(template: create_template_param)
+        resume.user = current_user if current_user
         if resume.save
           render json: ResumeResponse.call(resume), status: :created
         else
@@ -13,11 +20,15 @@ module Api
       end
 
       def show
+        return unless authorize_resume!(@resume)
+
         repair_corrupt_resume_data!
         render json: ResumeResponse.call(@resume)
       end
 
       def update
+        return unless authorize_resume!(@resume)
+
         if @resume.processing?
           return render json: { error: "Resume is being updated by the AI assistant" },
                         status: :conflict

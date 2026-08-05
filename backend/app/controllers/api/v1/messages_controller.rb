@@ -74,6 +74,7 @@ module Api
 
       def set_resume
         @resume = Resume.find_by!(session_id: params[:resume_session_id])
+        return unless authorize_resume!(@resume)
       end
     end
   end

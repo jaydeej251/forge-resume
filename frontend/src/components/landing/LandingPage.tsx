@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LandingSampleResume } from "@/components/landing/LandingSampleResume";
+import { useAuth } from "@/context/AuthContext";
 import { SESSION_STORAGE_KEY, TEMPLATES } from "@/templates/registry";
 
 export function LandingPage() {
   const router = useRouter();
+  const { user, status } = useAuth();
   const [hasDraft, setHasDraft] = useState(false);
 
   useEffect(() => {
@@ -30,12 +32,47 @@ export function LandingPage() {
               <p className="font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                 Forge Resume
               </p>
-              <Link
-                href="/templates"
-                className="cursor-pointer rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/18"
-              >
-                Templates
-              </Link>
+              <div className="flex items-center gap-2">
+                {status === "ready" && user ? (
+                  <>
+                    {user.is_admin && (
+                      <Link
+                        href="/admin"
+                        className="cursor-pointer rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/18"
+                      >
+                        Admin
+                      </Link>
+                    )}
+                    <Link
+                      href="/dashboard"
+                      className="cursor-pointer rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/18"
+                    >
+                      Dashboard
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      className="cursor-pointer px-2 py-1.5 text-sm font-semibold text-white/85 transition hover:text-white"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="cursor-pointer rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/18"
+                    >
+                      Sign up
+                    </Link>
+                  </>
+                )}
+                <Link
+                  href="/templates"
+                  className="hidden cursor-pointer rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/18 sm:inline-flex"
+                >
+                  Templates
+                </Link>
+              </div>
             </nav>
 
             <div className="mt-auto max-w-xl pb-6 pt-20 sm:pb-14 sm:pt-24 lg:pb-20">
@@ -53,7 +90,14 @@ export function LandingPage() {
                 >
                   Build my resume
                 </Link>
-                {hasDraft && (
+                {user ? (
+                  <Link
+                    href="/dashboard"
+                    className="cursor-pointer rounded-xl border border-white/35 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 active:scale-[0.98]"
+                  >
+                    My resumes
+                  </Link>
+                ) : hasDraft ? (
                   <button
                     type="button"
                     onClick={() => router.push("/builder")}
@@ -61,7 +105,7 @@ export function LandingPage() {
                   >
                     Continue draft
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

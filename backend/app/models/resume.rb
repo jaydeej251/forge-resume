@@ -29,6 +29,7 @@ class Resume < ApplicationRecord
 
   has_many :resume_messages, dependent: :destroy
   has_one_attached :photo
+  belongs_to :user, optional: true
 
   before_validation :ensure_session_id, on: :create
   before_validation :ensure_data, on: :create
@@ -44,6 +45,30 @@ class Resume < ApplicationRecord
 
   def processing?
     llm_status == "processing"
+  end
+
+  def owned?
+    user_id.present?
+  end
+
+  def accessible_by?(viewer)
+    return true unless owned?
+
+    viewer.present? && viewer.id == user_id
+  end
+
+  class AlreadyOwnedError < StandardError; end
+
+  def claim_for!(viewer)
+    raise ArgumentError, "user required" if viewer.blank?
+
+    if user_id.nil?
+      update!(user: viewer)
+      return self
+    end
+    return self if user_id == viewer.id
+
+    raise AlreadyOwnedError, "Resume already owned by another user"
   end
 
   def photo_url

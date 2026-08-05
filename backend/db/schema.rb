@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_05_153930) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_060001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -62,12 +62,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_153930) do
     t.string "session_id", null: false
     t.string "template", default: "classic", null: false
     t.datetime "updated_at", null: false
+    t.bigint "user_id"
     t.index ["current_step"], name: "index_resumes_on_current_step"
     t.index ["session_id"], name: "index_resumes_on_session_id", unique: true
     t.index ["template"], name: "index_resumes_on_template"
+    t.index ["user_id"], name: "index_resumes_on_user_id"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.string "google_uid"
+    t.string "name", default: "", null: false
+    t.string "password_digest"
+    t.string "provider", default: "email", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["google_uid"], name: "index_users_on_google_uid", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "resume_messages", "resumes"
+  add_foreign_key "resumes", "users"
 end

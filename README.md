@@ -121,6 +121,8 @@ Netlify also works for the frontend, but Vercel is the smoothest path for Next.j
 | `RAILS_MASTER_KEY` | Contents of `backend/config/master.key` |
 | `OPENROUTER_API_KEY` | Your OpenRouter key |
 | `FRONTEND_ORIGINS` | Leave as a placeholder for now (e.g. `http://localhost:3000`) — update after Vercel gives you a URL |
+| `GOOGLE_CLIENT_ID` | Google OAuth Web client ID (for Sign in with Google) |
+| `ADMIN_EMAILS` | Comma-separated admin emails for `/admin` |
 
 4. Wait for the first deploy. Note the service URL, e.g. `https://forge-resume-api.onrender.com`.
 5. Sanity check: open `https://YOUR-API.onrender.com/up` — you should see a green Rails health response.
@@ -151,6 +153,7 @@ Netlify also works for the frontend, but Vercel is the smoothest path for Next.j
 | Name | Value |
 |------|--------|
 | `NEXT_PUBLIC_API_URL` | `https://YOUR-API.onrender.com` (no trailing slash) |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google Web client ID (optional) |
 
 5. Deploy. Copy the Vercel URL, e.g. `https://forge-resume.vercel.app`.
 
@@ -183,16 +186,47 @@ Smoke test:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/v1/resumes` | Create session (optional `template`) |
+| `POST` | `/api/v1/auth/signup` | Email/password signup (+ optional guest claim) |
+| `POST` | `/api/v1/auth/login` | Email/password login (+ optional guest claim) |
+| `POST` | `/api/v1/auth/google` | Google ID token login/signup (+ optional claim) |
+| `GET` | `/api/v1/auth/me` | Current user (Bearer JWT) |
+| `POST` | `/api/v1/auth/claim` | Attach guest `session_id` to current user |
+| `GET` | `/api/v1/resumes` | List current user’s resumes (auth required) |
+| `POST` | `/api/v1/resumes` | Create session (optional `template`; associates user if JWT present) |
 | `GET` | `/api/v1/resumes/:session_id` | Fetch session |
 | `PATCH` | `/api/v1/resumes/:session_id` | Update resume data / template |
 | `POST` | `/api/v1/resumes/:session_id/messages/stream` | Chat turn (SSE) |
 | `POST` | `/api/v1/resumes/:session_id/messages` | Non-streaming fallback |
 | `POST` | `/api/v1/resumes/:session_id/photo` | Upload photo |
 | `DELETE` | `/api/v1/resumes/:session_id/photo` | Remove photo |
+| `GET` | `/api/v1/admin/stats` | Admin KPIs (auth + ADMIN_EMAILS) |
+| `GET` | `/api/v1/admin/users` | Admin users list with resume counts |
+| `GET` | `/api/v1/admin/users/:id/resumes` | Admin: resumes for one user |
 | `GET` | `/up` | Health check |
 
----
+### Auth notes
+
+- Guests can still build without an account (`session_id` in `localStorage`).
+- After signup/login/Google, the current browser draft is **claimed** onto the account when possible.
+- Owned resumes require a Bearer JWT matching `resume.user_id`.
+- Frontend pages: `/login`, `/signup`, `/dashboard`, `/admin` (read-only; requires `ADMIN_EMAILS`).
+
+Env for Google (optional but recommended):
+
+| Variable | Where |
+|----------|--------|
+| `GOOGLE_CLIENT_ID` | Render / `backend/.env` |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Vercel / `frontend/.env.local` (same Web client ID) |
+
+Create an OAuth **Web application** client in Google Cloud Console. Authorized JavaScript origins should include `http://localhost:3000` and your Vercel URL.
+
+Admin access (read-only):
+
+| Variable | Where |
+|----------|--------|
+| `ADMIN_EMAILS` | Render / `backend/.env` — comma-separated emails that may open `/admin` |
+
+`/auth/me` returns `is_admin` based on that list (no DB role column).
 
 ## Templates
 
@@ -207,9 +241,11 @@ Photo slots are enabled only on templates that support them (see frontend `templ
 - [x] Builder shell, canvas, PDF, SSE chat, step machine  
 - [x] Multi-template gallery + photo + landing / first-run tip  
 - [x] Free deploy path (Vercel + Render Blueprint)  
+- [x] User accounts (email/password + Google), claim guest drafts, dashboard  
+- [x] Read-only admin panel (`ADMIN_EMAILS`)  
 - [ ] Reliability (errors, retry, confirm New)  
-- [ ] User accounts and multi-resume ownership (schema restructure)  
 - [ ] Durable photo storage (S3/R2) and paid always-on API if needed  
+- [ ] Password reset / email verification  
 
 ---
 

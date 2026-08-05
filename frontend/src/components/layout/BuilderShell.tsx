@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { CoachTip } from "@/components/chat/CoachTip";
+import { SaveAccountBanner } from "@/components/chat/SaveAccountBanner";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import {
   MobilePaneTabs,
@@ -106,6 +107,7 @@ export function BuilderShell() {
             "lg:flex",
           ].join(" ")}
         >
+          {status === "ready" && <SaveAccountBanner />}
           {status === "ready" && <CoachTip />}
           <ChatPanel
             onViewPreview={openPreview}

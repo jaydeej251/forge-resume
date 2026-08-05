@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { DownloadPdfButton } from "@/components/pdf/DownloadPdfButton";
 import { StageRail } from "@/components/layout/StageRail";
+import { useAuth } from "@/context/AuthContext";
 import type { SaveStatus, SessionStatus } from "@/context/ResumeContext";
 import type { LlmStatus } from "@/lib/api";
 import type { ResumeState } from "@/types/resume";
@@ -49,15 +51,19 @@ export function AppTopBar({
   complete,
   onReset,
 }: AppTopBarProps) {
+  const { user } = useAuth();
   const writing = llmStatus === "processing";
 
   return (
     <header className="app-topbar shrink-0 border-b border-[var(--line)]/80 bg-[var(--panel-elevated)]/90 backdrop-blur-md">
       <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
         <div className="min-w-0 shrink-0">
-          <p className="font-display text-lg font-semibold tracking-tight text-[var(--ink)] sm:text-xl">
+          <Link
+            href={user ? "/dashboard" : "/"}
+            className="font-display text-lg font-semibold tracking-tight text-[var(--ink)] sm:text-xl"
+          >
             Forge Resume
-          </p>
+          </Link>
         </div>
 
         <div className="mx-auto hidden min-w-0 max-w-md flex-1 md:block">
@@ -103,11 +109,27 @@ export function AppTopBar({
             />
           )}
 
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="hidden cursor-pointer rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-soft)] transition hover:bg-slate-50 sm:inline-flex"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <Link
+              href="/signup?next=/builder"
+              className="hidden cursor-pointer rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--accent)] transition hover:bg-slate-50 sm:inline-flex"
+            >
+              Save
+            </Link>
+          )}
+
           <button
             type="button"
             onClick={onReset}
             disabled={status === "loading" || writing}
-            className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-soft)] transition hover:bg-slate-50 disabled:opacity-50"
+            className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-soft)] transition hover:bg-slate-50 disabled:opacity-50"
           >
             New
           </button>

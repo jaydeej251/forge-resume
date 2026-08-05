@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces, Geist_Mono } from "next/font/google";
+import { AuthProvider } from "@/context/AuthContext";
 import { ResumeProvider } from "@/context/ResumeContext";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -37,7 +38,9 @@ export default function RootLayout({
       className={`${uiSans.variable} ${display.variable} ${geistMono.variable} min-h-full antialiased`}
     >
       <body className="min-h-dvh flex flex-col antialiased" suppressHydrationWarning>
-        <ResumeProvider>{children}</ResumeProvider>
+        <AuthProvider>
+          <ResumeProvider>{children}</ResumeProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>
