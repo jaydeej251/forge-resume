@@ -8,6 +8,15 @@ import {
   type KeyboardEvent,
 } from "react";
 
+/** Normalize LLM/json nullish junk so the canvas never shows the word "null". */
+export function cleanDisplayText(value: unknown): string {
+  if (value == null) return "";
+  const text = String(value).replace(/\u00a0/g, " ").trim();
+  if (!text) return "";
+  if (/^(null|undefined|nil|none|n\/a)$/i.test(text)) return "";
+  return text;
+}
+
 type EditableTextProps = {
   value: string;
   onChange: (value: string) => void;
@@ -27,17 +36,17 @@ export function EditableText({
 }: EditableTextProps) {
   const ref = useRef<HTMLElement>(null);
   const [editing, setEditing] = useState(false);
+  const displayValue = cleanDisplayText(value);
 
   useEffect(() => {
     if (!ref.current || editing) return;
-    const next = value || "";
-    if (ref.current.textContent !== next) {
-      ref.current.textContent = next;
+    if (ref.current.textContent !== displayValue) {
+      ref.current.textContent = displayValue;
     }
-  }, [value, editing]);
+  }, [displayValue, editing]);
 
   const commit = () => {
-    const next = (ref.current?.textContent ?? "").replace(/\u00a0/g, " ").trimEnd();
+    const next = cleanDisplayText(ref.current?.textContent ?? "");
     onChange(next);
     setEditing(false);
   };
@@ -48,13 +57,13 @@ export function EditableText({
       ref.current?.blur();
     }
     if (event.key === "Escape") {
-      if (ref.current) ref.current.textContent = value;
+      if (ref.current) ref.current.textContent = displayValue;
       setEditing(false);
       ref.current?.blur();
     }
   };
 
-  const showPlaceholder = !value && !editing;
+  const showPlaceholder = !displayValue && !editing;
 
   return (
     <Tag

@@ -16,13 +16,29 @@ type PdfProps = {
 
 function contactItems(resume: ResumeState) {
   const info = resume.personal_info;
+  const clean = (value: unknown) => {
+    if (value == null) return "";
+    const text = String(value).trim();
+    if (!text || /^(null|undefined|nil|none|n\/a)$/i.test(text)) return "";
+    return text;
+  };
   return [
-    info.email,
-    info.phone,
-    info.location,
-    info.linkedin_url,
-    info.github_url,
-  ].filter(Boolean) as string[];
+    clean(info.email),
+    clean(info.phone),
+    clean(info.location),
+    clean(info.linkedin_url),
+    clean(info.github_url),
+  ].filter(Boolean);
+}
+
+function dateLabel(start: unknown, end: unknown, current: boolean) {
+  const clean = (value: unknown) => {
+    if (value == null) return "";
+    const text = String(value).trim();
+    if (!text || /^(null|undefined|nil|none|n\/a)$/i.test(text)) return "";
+    return text;
+  };
+  return [clean(start), current ? "Present" : clean(end)].filter(Boolean).join(" – ");
 }
 
 function SharedSections({
@@ -50,9 +66,7 @@ function SharedSections({
               <View style={styles.jobHeader}>
                 <Text style={styles.jobTitle}>{job.position || "Job title"}</Text>
                 <Text style={styles.dates}>
-                  {[job.start_date, job.current ? "Present" : job.end_date]
-                    .filter(Boolean)
-                    .join(" – ")}
+                  {dateLabel(job.start_date, job.end_date, job.current)}
                 </Text>
               </View>
               <Text style={styles.company}>{job.company || "Company"}</Text>
@@ -700,9 +714,7 @@ function TimelinePdf({ resume, photoUrl }: PdfProps) {
               {resume.work_experience.map((job) => (
                 <View key={job.id} style={timelineStyles.dotWrap}>
                   <Text style={timelineStyles.dates}>
-                    {[job.start_date, job.current ? "Present" : job.end_date]
-                      .filter(Boolean)
-                      .join(" – ")}
+                    {dateLabel(job.start_date, job.end_date, job.current)}
                   </Text>
                   <Text style={modernStyles.jobTitle}>
                     {job.position || "Job title"}

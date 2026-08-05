@@ -12,8 +12,11 @@ class ResumeEnhancer
     2. Preserve existing content unless the user is clearly updating it.
     3. Keep work_experience/education ids; new rows get UUID v4.
     4. Per role: prefer exactly 5 bullets (3 essential + 2 supporting). Strong verbs;
-       no fabricated metrics/tools/employers.
+       no fabricated metrics/tools/employers. If dates are unknown, use empty strings —
+       never the literal words null/undefined/N/A.
     5. Skills are short labels only.
+    6. Optional personal_info fields (phone, location, linkedin_url, github_url): omit or
+       use "" when the user did not provide them — never invent and never emit "null".
   PROMPT
 
   STEP_FOCUS = {

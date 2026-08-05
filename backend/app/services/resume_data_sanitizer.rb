@@ -67,10 +67,12 @@ class ResumeDataSanitizer
         raw = incoming.key?(key) ? incoming[key] : previous[key]
         next nil if raw.nil?
 
-        text = raw.to_s.strip
+        text = blankish(raw)
+        next nil if text.nil?
+
         next previous[key] if text.present? && corrupt?(text)
 
-        text.to_s.slice(0, MAX_FIELD_LENGTH)
+        text.slice(0, MAX_FIELD_LENGTH)
       end
     end
 
@@ -187,10 +189,21 @@ class ResumeDataSanitizer
     end
 
     def clean_field(value, max: MAX_FIELD_LENGTH)
-      text = value.to_s.strip
+      text = blankish(value)
       return "" if text.blank? || corrupt?(text)
 
       text.slice(0, max)
+    end
+
+    # LLM structured output often emits literal "null" / "undefined" for optional fields.
+    def blankish(value)
+      return nil if value.nil?
+
+      text = value.to_s.strip
+      return nil if text.blank?
+      return nil if text.match?(/\A(null|undefined|nil|none|n\/a)\z/i)
+
+      text
     end
   end
 end

@@ -448,75 +448,92 @@ export function ContactLine({
   const info = resume.personal_info;
   const justify = align === "center" ? "justify-center" : "justify-start";
 
+  const email = info.email ?? "";
+  const phone = info.phone ?? "";
+  const location = info.location ?? "";
+  const linkedin = info.linkedin_url ?? "";
+  const github = info.github_url ?? "";
+
+  const primary = [
+    {
+      key: "email",
+      value: email,
+      placeholder: "email@example.com",
+      onChange: (next: string) =>
+        patch((current) => ({
+          ...current,
+          personal_info: { ...current.personal_info, email: next },
+        })),
+    },
+    {
+      key: "phone",
+      value: phone,
+      placeholder: "Phone (optional)",
+      onChange: (next: string) =>
+        patch((current) => ({
+          ...current,
+          personal_info: { ...current.personal_info, phone: next },
+        })),
+    },
+    {
+      key: "location",
+      value: location,
+      placeholder: "Location (optional)",
+      onChange: (next: string) =>
+        patch((current) => ({
+          ...current,
+          personal_info: { ...current.personal_info, location: next },
+        })),
+    },
+  ];
+
   return (
     <>
       <div
         className={`mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-600 ${justify} ${className}`}
       >
-        <EditableText
-          value={info.email}
-          onChange={(email) =>
-            patch((current) => ({
-              ...current,
-              personal_info: { ...current.personal_info, email },
-            }))
-          }
-          placeholder="email@example.com"
-        />
-        <span aria-hidden>•</span>
-        <EditableText
-          value={info.phone}
-          onChange={(phone) =>
-            patch((current) => ({
-              ...current,
-              personal_info: { ...current.personal_info, phone },
-            }))
-          }
-          placeholder="(555) 000-0000"
-        />
-        <span aria-hidden>•</span>
-        <EditableText
-          value={info.location}
-          onChange={(location) =>
-            patch((current) => ({
-              ...current,
-              personal_info: { ...current.personal_info, location },
-            }))
-          }
-          placeholder="City, Country"
-        />
+        {primary.map((field, index) => (
+          <span key={field.key} className="inline-flex items-center gap-x-2">
+            {index > 0 ? <span aria-hidden>•</span> : null}
+            <EditableText
+              value={field.value}
+              onChange={field.onChange}
+              placeholder={field.placeholder}
+            />
+          </span>
+        ))}
       </div>
       <div
-        className={`mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-600 ${justify}`}
-      >
-        <EditableText
-          value={info.linkedin_url ?? ""}
-          onChange={(linkedin_url) =>
-            patch((current) => ({
-              ...current,
-              personal_info: {
-                ...current.personal_info,
-                linkedin_url: linkedin_url || undefined,
-              },
-            }))
-          }
-          placeholder="LinkedIn URL"
-        />
-        <span aria-hidden>•</span>
-        <EditableText
-          value={info.github_url ?? ""}
-          onChange={(github_url) =>
-            patch((current) => ({
-              ...current,
-              personal_info: {
-                ...current.personal_info,
-                github_url: github_url || undefined,
-              },
-            }))
-          }
-          placeholder="GitHub URL"
-        />
-      </div>
+          className={`mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-600 ${justify}`}
+        >
+          <EditableText
+            value={linkedin}
+            onChange={(linkedin_url) =>
+              patch((current) => ({
+                ...current,
+                personal_info: {
+                  ...current.personal_info,
+                  linkedin_url: linkedin_url || undefined,
+                },
+              }))
+            }
+            placeholder="LinkedIn (optional)"
+          />
+          <span aria-hidden>•</span>
+          <EditableText
+            value={github}
+            onChange={(github_url) =>
+              patch((current) => ({
+                ...current,
+                personal_info: {
+                  ...current.personal_info,
+                  github_url: github_url || undefined,
+                },
+              }))
+            }
+            placeholder="GitHub (optional)"
+          />
+        </div>
     </>
   );
 }
