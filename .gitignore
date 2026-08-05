@@ -1,0 +1,23 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+.cursor/
+*.code-workspace
+
+# Secrets (keep examples)
+**/.env
+**/.env.local
+!**/.env.example
+!**/.env.local.example
+
+# Dependencies / build artifacts (belt-and-suspenders with app gitignores)
+**/node_modules/
+**/.next/
+**/coverage/
+**/tmp/
+**/log/
+**/storage/*
+!**/storage/.keep
