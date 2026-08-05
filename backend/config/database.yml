@@ -2,6 +2,9 @@
 #
 # Local: DATABASE_* from .env
 # Production: DATABASE_URL from the host (Render / Neon / etc.)
+#
+# Solid Cache/Queue/Cable gems still resolve named DBs on boot even when the
+# app uses memory_store / async adapters — point those names at the same URL.
 
 default: &default
   adapter: postgresql
@@ -20,10 +23,18 @@ test:
   <<: *default
   database: resume_builder_test
 
-# Single database for soft-launch / free-tier hosts.
-# Chat uses in-request SSE (not Solid Queue), so multi-DB Solid* is optional later.
 production:
-  adapter: postgresql
-  encoding: unicode
-  url: <%= ENV["DATABASE_URL"] %>
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  primary: &primary_production
+    adapter: postgresql
+    encoding: unicode
+    url: <%= ENV["DATABASE_URL"] %>
+    max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  cache:
+    <<: *primary_production
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *primary_production
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *primary_production
+    migrations_paths: db/cable_migrate

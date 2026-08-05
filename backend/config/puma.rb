@@ -28,6 +28,11 @@
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
+# Free-tier / single dyno: stay in single-process mode unless explicitly raised.
+# (Avoid Puma cluster when WEB_CONCURRENCY is unset or 0.)
+workers_count = Integer(ENV.fetch("WEB_CONCURRENCY", 0))
+workers workers_count if workers_count > 0
+
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 port ENV.fetch("PORT", 3000)
 

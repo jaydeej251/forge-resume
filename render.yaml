@@ -30,8 +30,9 @@ services:
         value: openai/gpt-4o-mini
       - key: FRONTEND_ORIGINS
         sync: false
+      # Keep workers at 0 (single process) on free tier — avoid cluster boot surprises.
       - key: WEB_CONCURRENCY
-        value: "1"
+        value: "0"
       - key: RAILS_MAX_THREADS
         value: "3"
       - key: DATABASE_URL
