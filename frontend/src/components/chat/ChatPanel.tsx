@@ -5,6 +5,7 @@ import { Composer } from "@/components/chat/Composer";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { DownloadPdfButton } from "@/components/pdf/DownloadPdfButton";
 import { useResume } from "@/context/ResumeContext";
+import { humanizeError } from "@/lib/errors";
 import { isFlowComplete, STEP_HINTS } from "@/types/steps";
 import { templateSupportsPhoto } from "@/templates/registry";
 
@@ -52,14 +53,15 @@ export function ChatPanel({
     llmError,
     status,
     sendMessage,
+    clearLlmError,
     currentStep,
     streamStatus,
-    resetSession,
     flowComplete,
   } = useResume();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [lastFailed, setLastFailed] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastScrollKeyRef = useRef<string>("");
 
@@ -93,19 +95,32 @@ export function ChatPanel({
 
     setSending(true);
     setSendError(null);
+    clearLlmError();
     setDraft("");
     try {
       await sendMessage(trimmed);
+      setLastFailed(null);
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Failed to send");
+      const message = humanizeError(err, "Failed to send");
+      setLastFailed(trimmed);
+      setDraft(trimmed);
+      setSendError(message);
     } finally {
       setSending(false);
     }
   };
 
+  const retry = () => {
+    const content = lastFailed?.trim();
+    if (!content) return;
+    void submit(content);
+  };
+
   const busy = sending || llmStatus === "processing";
   const userMessageCount = messages.filter((m) => m.role === "user").length;
   const showChips = !complete && !busy && userMessageCount === 0;
+  const composedError = sendError || llmError;
+  const canRetry = Boolean(lastFailed) && !busy && status === "ready";
 
   return (
     <div className="chat-panel flex min-h-0 flex-1 flex-col bg-[var(--chat-bg)]">
@@ -137,7 +152,9 @@ export function ChatPanel({
                 "whitespace-pre-wrap px-3.5 py-2.5 text-[13px] leading-relaxed",
                 message.role === "user"
                   ? "rounded-2xl rounded-br-md bg-[var(--ink)] text-white"
-                  : "rounded-2xl rounded-bl-md bg-[var(--assistant-bubble)] text-[var(--ink-soft)] ring-1 ring-[var(--line)]/70",
+                  : message.status === "failed"
+                    ? "rounded-2xl rounded-bl-md bg-red-50 text-[var(--danger)] ring-1 ring-red-200"
+                    : "rounded-2xl rounded-bl-md bg-[var(--assistant-bubble)] text-[var(--ink-soft)] ring-1 ring-[var(--line)]/70",
               ].join(" ")}
             >
               {message.status === "pending" && !message.content ? (
@@ -156,7 +173,7 @@ export function ChatPanel({
                 key={chip}
                 type="button"
                 onClick={() => setDraft(chip)}
-                className="suggestion-chip"
+                className="suggestion-chip cursor-pointer"
               >
                 {chip === "done" || chip === "skip" ? chip : truncateChip(chip)}
               </button>
@@ -168,7 +185,7 @@ export function ChatPanel({
           <button
             type="button"
             onClick={onViewPreview}
-            className="message-enter suggestion-chip border-[var(--accent)]/30 text-[var(--accent)] lg:hidden"
+            className="message-enter suggestion-chip cursor-pointer border-[var(--accent)]/30 text-[var(--accent)] lg:hidden"
           >
             View preview →
           </button>
@@ -195,18 +212,15 @@ export function ChatPanel({
                 <button
                   type="button"
                   onClick={onViewPreview}
-                  className="rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-slate-50 lg:hidden"
+                  className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-slate-50 lg:hidden"
                 >
                   Open preview
                 </button>
               )}
               <button
                 type="button"
-                onClick={() => {
-                  if (onNewResume) onNewResume();
-                  else resetSession();
-                }}
-                className="rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-slate-50"
+                onClick={() => onNewResume?.()}
+                className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-slate-50"
               >
                 New resume
               </button>
@@ -221,7 +235,9 @@ export function ChatPanel({
             disabled={status !== "ready"}
             busy={busy}
             statusText={streamStatus || undefined}
-            error={sendError || llmError}
+            error={composedError}
+            onRetry={canRetry ? retry : undefined}
+            retryLabel="Retry send"
           />
         )}
       </div>

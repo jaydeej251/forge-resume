@@ -30,6 +30,7 @@ import {
   SESSION_STORAGE_KEY,
   type TemplateId,
 } from "@/templates/registry";
+import { humanizeError } from "@/lib/errors";
 
 const SAVE_DEBOUNCE_MS = 700;
 
@@ -57,8 +58,10 @@ type ResumeContextValue = {
   updateResume: (partial: Partial<ResumeState>) => void;
   resetSession: () => void;
   loadSession: (sessionId?: string) => Promise<void>;
+  reloadSession: () => Promise<void>;
   changeTemplate: (template: TemplateId) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
+  clearLlmError: () => void;
   uploadPhoto: (file: File) => Promise<void>;
   removePhoto: () => Promise<void>;
 };
@@ -142,14 +145,23 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       try {
         const existing = await getResumeSession(storedId);
         applySession(existing);
-      } catch {
-        localStorage.removeItem(SESSION_STORAGE_KEY);
-        setSessionId(null);
-        setStatus("idle");
+      } catch (err) {
+        const message = humanizeError(err, "Couldn't restore your session.");
+        const gone = /API 404|not found/i.test(
+          err instanceof Error ? err.message : String(err),
+        );
+        if (gone) {
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+          setSessionId(null);
+          setStatus("idle");
+          return;
+        }
+        setSessionId(storedId);
+        setError(message);
+        setStatus("error");
       }
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to restore resume session";
+      const message = humanizeError(err, "Couldn't restore your session.");
       setError(message);
       setStatus("error");
     }
@@ -172,10 +184,17 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(SESSION_STORAGE_KEY);
       setSessionId(null);
       setStatus("idle");
-      throw err instanceof Error
-        ? err
-        : new Error("Failed to load resume session");
+      throw new Error(humanizeError(err, "Failed to load resume session"));
     }
+  };
+
+  const reloadSession = async () => {
+    await bootstrapSession();
+  };
+
+  const clearLlmError = () => {
+    setLlmError(null);
+    setLlmStatus((current) => (current === "failed" ? "idle" : current));
   };
 
   const resetSession = () => {
@@ -233,6 +252,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setStreamStatus("Connecting…");
 
     let assistantId: number | null = null;
+    let streamError: string | null = null;
 
     try {
       await streamResumeMessage(
@@ -298,21 +318,26 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
             }
           },
           onError: (payload) => {
+            const message = humanizeError(payload.message, "Chat update failed");
+            streamError = message;
             setLlmStatus(payload.llm_status ?? "failed");
-            setLlmError(payload.message);
+            setLlmError(message);
             setStreamStatus(null);
           },
         },
         controller.signal,
       );
+
+      if (streamError) {
+        throw new Error(streamError);
+      }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
-      const message =
-        err instanceof Error ? err.message : "Failed to stream message";
+      const message = humanizeError(err, "Failed to stream message");
       setLlmStatus("failed");
       setLlmError(message);
       setStreamStatus(null);
-      throw err;
+      throw new Error(message);
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
@@ -367,8 +392,10 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         updateResume,
         resetSession,
         loadSession,
+        reloadSession,
         changeTemplate,
         sendMessage,
+        clearLlmError,
         uploadPhoto,
         removePhoto,
       }}

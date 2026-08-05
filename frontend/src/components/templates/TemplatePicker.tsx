@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useResume } from "@/context/ResumeContext";
 import { createResumeSession, getResumeSession } from "@/lib/api";
+import { humanizeError } from "@/lib/errors";
 import {
   SESSION_STORAGE_KEY,
   TEMPLATES,
@@ -18,6 +19,9 @@ export function TemplatePicker() {
   const [hasDraft, setHasDraft] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastAction, setLastAction] = useState<"start" | "continue" | null>(
+    null,
+  );
 
   useEffect(() => {
     const id = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -36,13 +40,14 @@ export function TemplatePicker() {
   const startFresh = async () => {
     setBusy(true);
     setError(null);
+    setLastAction("start");
     try {
       localStorage.removeItem(SESSION_STORAGE_KEY);
       const session = await createResumeSession(selected);
       await loadSession(session.session_id);
       router.push("/builder");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start session");
+      setError(humanizeError(err, "Failed to start session"));
       setBusy(false);
     }
   };
@@ -50,11 +55,12 @@ export function TemplatePicker() {
   const continueDraft = async () => {
     setBusy(true);
     setError(null);
+    setLastAction("continue");
     try {
       await loadSession();
       router.push("/builder");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to open draft");
+      setError(humanizeError(err, "Failed to open draft"));
       setBusy(false);
     }
   };
@@ -137,7 +143,19 @@ export function TemplatePicker() {
         </div>
 
         {error && (
-          <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>
+          <div className="mt-4 flex flex-wrap items-start justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
+            <p className="min-w-0 flex-1 text-sm text-[var(--danger)]">{error}</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void (lastAction === "continue" ? continueDraft() : startFresh())
+              }
+              className="cursor-pointer shrink-0 text-xs font-semibold text-[var(--danger)] underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              Retry
+            </button>
+          </div>
         )}
 
         <div className="mt-8 flex flex-wrap items-center gap-3">

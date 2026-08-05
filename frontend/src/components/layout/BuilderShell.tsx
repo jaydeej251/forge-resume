@@ -11,6 +11,7 @@ import {
   type MobilePane,
 } from "@/components/layout/MobilePaneTabs";
 import { PreviewStage } from "@/components/layout/PreviewStage";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useResume } from "@/context/ResumeContext";
 import { isFlowComplete } from "@/types/steps";
 
@@ -25,6 +26,7 @@ export function BuilderShell() {
     llmStatus,
     error,
     resetSession,
+    reloadSession,
     currentStep,
     stepIndex,
     messages,
@@ -34,6 +36,8 @@ export function BuilderShell() {
   const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
   const [previewCue, setPreviewCue] = useState(false);
   const [lastLlm, setLastLlm] = useState(llmStatus);
+  const [confirmNewOpen, setConfirmNewOpen] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const skipIdleRedirectRef = useRef(false);
 
   const complete =
@@ -71,6 +75,17 @@ export function BuilderShell() {
     router.push("/templates");
   };
 
+  const requestNew = () => setConfirmNewOpen(true);
+
+  const retrySession = async () => {
+    setReloading(true);
+    try {
+      await reloadSession();
+    } finally {
+      setReloading(false);
+    }
+  };
+
   const showChat = mobilePane === "chat";
   const showPreview = mobilePane === "preview";
 
@@ -87,8 +102,35 @@ export function BuilderShell() {
         currentStep={currentStep}
         stepIndex={stepIndex}
         complete={complete}
-        onReset={handleNew}
+        onReset={requestNew}
       />
+
+      {status === "error" && (
+        <div className="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-[var(--danger)] sm:text-sm">
+              {error || "Couldn't restore your session."}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={reloading}
+                onClick={() => void retrySession()}
+                className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-[var(--danger)] underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {reloading ? "Retrying…" : "Retry"}
+              </button>
+              <button
+                type="button"
+                onClick={requestNew}
+                className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-[var(--ink-soft)] hover:bg-white/70"
+              >
+                New resume
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <MobilePaneTabs
         active={mobilePane}
@@ -112,7 +154,7 @@ export function BuilderShell() {
           <ChatPanel
             onViewPreview={openPreview}
             showPreviewCue={previewCue && showChat}
-            onNewResume={handleNew}
+            onNewResume={requestNew}
           />
         </aside>
 
@@ -129,6 +171,20 @@ export function BuilderShell() {
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmNewOpen}
+        title="Start a new resume?"
+        body="This leaves the current draft in this browser session flow and takes you back to templates. You can still open claimed resumes from your dashboard."
+        confirmLabel="Start new"
+        cancelLabel="Keep editing"
+        danger
+        onCancel={() => setConfirmNewOpen(false)}
+        onConfirm={() => {
+          setConfirmNewOpen(false);
+          handleNew();
+        }}
+      />
     </div>
   );
 }
