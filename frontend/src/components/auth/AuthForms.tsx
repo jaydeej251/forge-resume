@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { useAuth } from "@/context/AuthContext";
+import { humanizeError } from "@/lib/errors";
 
 function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -41,7 +42,7 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
           : await login({ email, password });
       finish(claimed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      setError(humanizeError(err, "Authentication failed"));
       setBusy(false);
     }
   };
@@ -53,7 +54,7 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
       const claimed = await loginWithGoogle(idToken);
       finish(claimed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed");
+      setError(humanizeError(err, "Google sign-in failed"));
       setBusy(false);
     }
   };

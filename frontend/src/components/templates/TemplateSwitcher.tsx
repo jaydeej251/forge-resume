@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useResume } from "@/context/ResumeContext";
+import { humanizeError } from "@/lib/errors";
 import { TEMPLATES, type TemplateId } from "@/templates/registry";
 
 export function TemplateSwitcher() {
@@ -16,7 +17,7 @@ export function TemplateSwitcher() {
     try {
       await changeTemplate(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not switch template");
+      setError(humanizeError(err, "Could not switch template"));
     } finally {
       setBusy(false);
     }

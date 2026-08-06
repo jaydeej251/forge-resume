@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { pdf } from "@react-pdf/renderer";
 import { ResumePdfDocument } from "@/components/pdf/ResumePdfDocument";
+import { humanizeError } from "@/lib/errors";
 import type { ResumeState } from "@/types/resume";
 import type { TemplateId } from "@/templates/registry";
 
@@ -24,9 +25,11 @@ export function DownloadPdfButton({
   className = "",
 }: DownloadPdfButtonProps) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDownload = async () => {
     setBusy(true);
+    setError(null);
     try {
       const blob = await pdf(
         <ResumePdfDocument
@@ -43,6 +46,8 @@ export function DownloadPdfButton({
       anchor.download = `${baseName}.pdf`;
       anchor.click();
       URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(humanizeError(err, "Couldn't prepare the PDF"));
     } finally {
       setBusy(false);
     }
@@ -59,13 +64,25 @@ export function DownloadPdfButton({
     size === "sm" ? "rounded-lg px-2.5 py-1.5 text-xs" : "rounded-lg px-3.5 py-2 text-sm";
 
   return (
-    <button
-      type="button"
-      onClick={() => void handleDownload()}
-      disabled={busy}
-      className={`inline-flex items-center font-semibold transition disabled:opacity-60 ${sizing} ${styles} ${className}`}
-    >
-      {busy ? "Preparing…" : size === "sm" ? "Download" : "Download PDF"}
-    </button>
+    <div className="inline-flex max-w-full flex-col items-stretch gap-1">
+      <button
+        type="button"
+        onClick={() => void handleDownload()}
+        disabled={busy}
+        className={`inline-flex cursor-pointer items-center justify-center font-semibold transition disabled:opacity-60 ${sizing} ${styles} ${className}`}
+      >
+        {busy ? "Preparing…" : size === "sm" ? "Download" : "Download PDF"}
+      </button>
+      {error && (
+        <button
+          type="button"
+          onClick={() => void handleDownload()}
+          disabled={busy}
+          className="cursor-pointer text-left text-[10px] font-semibold text-[var(--danger)] underline-offset-2 hover:underline disabled:opacity-50"
+        >
+          {error} · Retry
+        </button>
+      )}
+    </div>
   );
 }

@@ -175,7 +175,7 @@ export function BuilderShell() {
       <ConfirmDialog
         open={confirmNewOpen}
         title="Start a new resume?"
-        body="This leaves the current draft in this browser session flow and takes you back to templates. You can still open claimed resumes from your dashboard."
+        body="This clears the draft from this browser and returns you to templates. Signed-in users can reopen claimed resumes from the dashboard. Guest drafts in this tab will no longer auto-open."
         confirmLabel="Start new"
         cancelLabel="Keep editing"
         danger

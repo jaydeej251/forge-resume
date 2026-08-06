@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { listResumesRequest, type ResumeSummary } from "@/lib/api";
+import { humanizeError } from "@/lib/errors";
 import { SESSION_STORAGE_KEY } from "@/templates/registry";
 
 export default function DashboardPage() {
@@ -21,13 +22,38 @@ export default function DashboardPage() {
       return;
     }
 
+    let cancelled = false;
+    setLoading(true);
+    void listResumesRequest()
+      .then(({ resumes: rows }) => {
+        if (!cancelled) {
+          setResumes(rows);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(humanizeError(err, "Failed to load resumes"));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, status, router]);
+
+  const reload = () => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
     void listResumesRequest()
       .then(({ resumes: rows }) => setResumes(rows))
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load resumes"),
-      )
+      .catch((err) => setError(humanizeError(err, "Failed to load resumes")))
       .finally(() => setLoading(false));
-  }, [user, status, router]);
+  };
 
   const openResume = (sessionId: string) => {
     try {
@@ -95,7 +121,16 @@ export default function DashboardPage() {
         </header>
 
         {error && (
-          <p className="mt-6 text-sm text-[var(--danger)]">{error}</p>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
+            <p className="text-sm text-[var(--danger)]">{error}</p>
+            <button
+              type="button"
+              onClick={reload}
+              className="cursor-pointer text-xs font-semibold text-[var(--danger)] underline-offset-2 hover:underline"
+            >
+              Retry
+            </button>
+          </div>
         )}
 
         {!loading && resumes.length === 0 && (

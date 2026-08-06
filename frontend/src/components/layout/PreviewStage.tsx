@@ -48,11 +48,13 @@ export function PreviewStage({
           <p className="text-xs text-[var(--muted)]">
             {complete
               ? "Final review — switch styles anytime, then export."
-              : "Switch templates anytime. Content stays; photo shows on Classic/Modern."}
+              : "Switch templates anytime. Content stays; photo shows when the template allows."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <TemplateSwitcher />
+          <div className="hidden lg:block">
+            <TemplateSwitcher />
+          </div>
           <DownloadPdfButton
             resume={resume}
             template={template}

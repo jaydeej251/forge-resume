@@ -7,15 +7,9 @@ import {
   type ElementType,
   type KeyboardEvent,
 } from "react";
+import { cleanDisplayText } from "@/lib/formatDisplay";
 
-/** Normalize LLM/json nullish junk so the canvas never shows the word "null". */
-export function cleanDisplayText(value: unknown): string {
-  if (value == null) return "";
-  const text = String(value).replace(/\u00a0/g, " ").trim();
-  if (!text) return "";
-  if (/^(null|undefined|nil|none|n\/a)$/i.test(text)) return "";
-  return text;
-}
+export { cleanDisplayText };
 
 type EditableTextProps = {
   value: string;

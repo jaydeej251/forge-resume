@@ -12,6 +12,7 @@ import {
   type AdminUserRow,
   type ResumeSummary,
 } from "@/lib/api";
+import { humanizeError } from "@/lib/errors";
 import { SESSION_STORAGE_KEY } from "@/templates/registry";
 
 export default function AdminPage() {
@@ -43,7 +44,7 @@ export default function AdminPage() {
         setUsers(nextUsers.users);
       })
       .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load admin data"),
+        setError(humanizeError(err, "Failed to load admin data")),
       )
       .finally(() => setLoading(false));
   }, [user, status, router]);
@@ -57,7 +58,7 @@ export default function AdminPage() {
       const data = await adminUserResumesRequest(row.id);
       setResumes(data.resumes);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load resumes");
+      setError(humanizeError(err, "Failed to load resumes"));
       setResumes([]);
     } finally {
       setLoadingResumes(false);
@@ -91,7 +92,7 @@ export default function AdminPage() {
             Forbidden
           </h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Your account is not listed in ADMIN_EMAILS.
+            You don&apos;t have admin access on this account.
           </p>
           <Link
             href="/dashboard"
@@ -138,7 +139,33 @@ export default function AdminPage() {
         </header>
 
         {error && (
-          <p className="mt-6 text-sm text-[var(--danger)]">{error}</p>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
+            <p className="text-sm text-[var(--danger)]">{error}</p>
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedId != null) {
+                  const row = users.find((u) => u.id === selectedId);
+                  if (row) void loadUserResumes(row);
+                  return;
+                }
+                setLoading(true);
+                setError(null);
+                void Promise.all([adminStatsRequest(), adminUsersRequest()])
+                  .then(([nextStats, nextUsers]) => {
+                    setStats(nextStats);
+                    setUsers(nextUsers.users);
+                  })
+                  .catch((err) =>
+                    setError(humanizeError(err, "Failed to load admin data")),
+                  )
+                  .finally(() => setLoading(false));
+              }}
+              className="cursor-pointer text-xs font-semibold text-[var(--danger)] underline-offset-2 hover:underline"
+            >
+              Retry
+            </button>
+          </div>
         )}
 
         <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -95,7 +95,7 @@ export function TimelineCanvas() {
                     ),
                   }))
                 }
-                className="absolute -right-1 -top-1 hidden rounded bg-white px-1.5 py-0.5 text-[10px] text-red-600 ring-1 ring-red-200 group-hover/job:block"
+                className="absolute -right-1 -top-1 rounded bg-white px-1.5 py-0.5 text-[10px] text-red-600 ring-1 ring-red-200"
               >
                 Remove
               </button>

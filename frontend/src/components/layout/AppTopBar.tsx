@@ -45,7 +45,7 @@ export function AppTopBar({
   status,
   saveStatus,
   llmStatus,
-  error,
+  error: _error,
   currentStep,
   stepIndex,
   complete,
@@ -75,7 +75,7 @@ export function AppTopBar({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <span className="hidden items-center gap-1.5 text-[11px] text-[var(--muted)] sm:inline-flex">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
             <span
               className={[
                 "h-1.5 w-1.5 rounded-full",
@@ -84,12 +84,14 @@ export function AppTopBar({
                   : writing
                     ? "bg-amber-400 pulse-soft"
                     : status === "ready"
-                      ? "bg-[var(--accent)]"
+                      ? saveStatus === "error"
+                        ? "bg-[var(--danger)]"
+                        : "bg-[var(--accent)]"
                       : "bg-amber-400 pulse-soft",
               ].join(" ")}
             />
             {status === "loading" && "Connecting"}
-            {status === "error" && "Offline"}
+            {status === "error" && "Can't load"}
             {status === "ready" &&
               (writing
                 ? "AI writing"
@@ -143,12 +145,6 @@ export function AppTopBar({
           complete={complete}
         />
       </div>
-
-      {error && (
-        <p className="border-t border-red-100 bg-red-50 px-4 py-1.5 text-xs text-[var(--danger)]">
-          {error}
-        </p>
-      )}
     </header>
   );
 }

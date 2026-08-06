@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LandingSampleResume } from "@/components/landing/LandingSampleResume";
 import { useAuth } from "@/context/AuthContext";
+import { getResumeSession } from "@/lib/api";
 import { SESSION_STORAGE_KEY, TEMPLATES } from "@/templates/registry";
 
 export function LandingPage() {
@@ -13,7 +14,17 @@ export function LandingPage() {
   const [hasDraft, setHasDraft] = useState(false);
 
   useEffect(() => {
-    setHasDraft(Boolean(localStorage.getItem(SESSION_STORAGE_KEY)));
+    const id = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!id) {
+      setHasDraft(false);
+      return;
+    }
+    void getResumeSession(id)
+      .then(() => setHasDraft(true))
+      .catch(() => {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        setHasDraft(false);
+      });
   }, []);
 
   const previewLooks = TEMPLATES.filter((t) =>
@@ -68,7 +79,7 @@ export function LandingPage() {
                 )}
                 <Link
                   href="/templates"
-                  className="hidden cursor-pointer rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/18 sm:inline-flex"
+                  className="cursor-pointer rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/18"
                 >
                   Templates
                 </Link>

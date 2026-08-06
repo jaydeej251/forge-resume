@@ -61,7 +61,7 @@ export function GoogleSignInButton({
       window.google.accounts.id.renderButton(containerRef.current, {
         theme: "outline",
         size: "large",
-        width: 320,
+        width: Math.min(320, Math.max(240, containerRef.current.clientWidth || 280)),
         text: "continue_with",
         shape: "rectangular",
       });
@@ -103,7 +103,7 @@ export function GoogleSignInButton({
 
   return (
     <div className={disabled ? "pointer-events-none opacity-60" : ""}>
-      <div ref={containerRef} className="flex justify-center" />
+      <div ref={containerRef} className="mx-auto flex w-full max-w-[320px] justify-center" />
       {!ready && !error && (
         <p className="mt-2 text-center text-xs text-[var(--muted)]">
           Loading Google…

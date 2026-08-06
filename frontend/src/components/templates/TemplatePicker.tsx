@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useResume } from "@/context/ResumeContext";
 import { createResumeSession, getResumeSession } from "@/lib/api";
 import { humanizeError } from "@/lib/errors";
@@ -14,6 +15,7 @@ import {
 
 export function TemplatePicker() {
   const router = useRouter();
+  const { user, status: authStatus, logout } = useAuth();
   const { loadSession } = useResume();
   const [selected, setSelected] = useState<TemplateId>("classic");
   const [hasDraft, setHasDraft] = useState(false);
@@ -41,12 +43,18 @@ export function TemplatePicker() {
     setBusy(true);
     setError(null);
     setLastAction("start");
+    const previousId = localStorage.getItem(SESSION_STORAGE_KEY);
     try {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
       const session = await createResumeSession(selected);
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      setHasDraft(false);
       await loadSession(session.session_id);
       router.push("/builder");
     } catch (err) {
+      if (previousId) {
+        localStorage.setItem(SESSION_STORAGE_KEY, previousId);
+        setHasDraft(true);
+      }
       setError(humanizeError(err, "Failed to start session"));
       setBusy(false);
     }
@@ -60,6 +68,7 @@ export function TemplatePicker() {
       await loadSession();
       router.push("/builder");
     } catch (err) {
+      setHasDraft(false);
       setError(humanizeError(err, "Failed to open draft"));
       setBusy(false);
     }
@@ -81,18 +90,49 @@ export function TemplatePicker() {
             </p>
           </div>
           <div className="flex items-center gap-2 pt-1">
-            <Link
-              href="/dashboard"
-              className="cursor-pointer text-sm font-semibold text-[var(--accent)]"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/login"
-              className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--ink-soft)]"
-            >
-              Sign in
-            </Link>
+            {authStatus === "ready" && user ? (
+              <>
+                {user.is_admin && (
+                  <Link
+                    href="/admin"
+                    className="cursor-pointer text-sm font-semibold text-[var(--accent)]"
+                  >
+                    Admin
+                  </Link>
+                )}
+                <Link
+                  href="/dashboard"
+                  className="cursor-pointer text-sm font-semibold text-[var(--accent)]"
+                >
+                  Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    router.push("/");
+                  }}
+                  className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--ink-soft)]"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/signup"
+                  className="cursor-pointer text-sm font-semibold text-[var(--accent)]"
+                >
+                  Sign up
+                </Link>
+                <Link
+                  href="/login"
+                  className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--ink-soft)]"
+                >
+                  Sign in
+                </Link>
+              </>
+            )}
           </div>
         </header>
 
@@ -107,7 +147,7 @@ export function TemplatePicker() {
               onClick={() => void continueDraft()}
               className="rounded-lg bg-[var(--ink)] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[var(--ink-soft)] disabled:opacity-60"
             >
-              Continue draft
+              {busy && lastAction === "continue" ? "Opening…" : "Continue draft"}
             </button>
           </div>
         )}
@@ -165,9 +205,11 @@ export function TemplatePicker() {
             onClick={() => void startFresh()}
             className="rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
           >
-            {busy
+            {busy && lastAction === "start"
               ? "Starting…"
-              : `Use ${TEMPLATES.find((t) => t.id === selected)?.name}`}
+              : busy && lastAction === "continue"
+                ? "Opening…"
+                : `Use ${TEMPLATES.find((t) => t.id === selected)?.name}`}
           </button>
           <p className="text-xs text-[var(--muted)]">
             You can edit every field after the AI drafts — PDF matches this look.

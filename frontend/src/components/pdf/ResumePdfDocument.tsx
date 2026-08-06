@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from "@react-pdf/renderer";
+import { formatResumeProperNouns } from "@/lib/formatDisplay";
 import type { ResumeState } from "@/types/resume";
 import type { TemplateId } from "@/templates/registry";
 
@@ -755,23 +756,25 @@ export function ResumePdfDocument({
   template = "classic",
   photoUrl = null,
 }: ResumePdfDocumentProps) {
+  const presented = formatResumeProperNouns(resume);
+
   switch (template) {
     case "modern":
-      return <ModernPdf resume={resume} photoUrl={photoUrl} />;
+      return <ModernPdf resume={presented} photoUrl={photoUrl} />;
     case "compact":
-      return <CompactPdf resume={resume} />;
+      return <CompactPdf resume={presented} />;
     case "executive":
-      return <ExecutivePdf resume={resume} photoUrl={photoUrl} />;
+      return <ExecutivePdf resume={presented} photoUrl={photoUrl} />;
     case "creative":
-      return <CreativePdf resume={resume} photoUrl={photoUrl} />;
+      return <CreativePdf resume={presented} photoUrl={photoUrl} />;
     case "two_column":
-      return <TwoColumnPdf resume={resume} photoUrl={photoUrl} />;
+      return <TwoColumnPdf resume={presented} photoUrl={photoUrl} />;
     case "minimal":
-      return <MinimalPdf resume={resume} />;
+      return <MinimalPdf resume={presented} />;
     case "timeline":
-      return <TimelinePdf resume={resume} photoUrl={photoUrl} />;
+      return <TimelinePdf resume={presented} photoUrl={photoUrl} />;
     case "classic":
     default:
-      return <ClassicPdf resume={resume} photoUrl={photoUrl} />;
+      return <ClassicPdf resume={presented} photoUrl={photoUrl} />;
   }
 }

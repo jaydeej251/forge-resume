@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useResume } from "@/context/ResumeContext";
+import { humanizeError } from "@/lib/errors";
 
 type PhotoSlotProps = {
   variant?: "circle" | "rounded";
@@ -17,8 +18,7 @@ export function PhotoSlot({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const shape =
-    variant === "circle" ? "rounded-full" : "rounded-lg";
+  const shape = variant === "circle" ? "rounded-full" : "rounded-lg";
 
   const onPick = async (file: File | undefined) => {
     if (!file) return;
@@ -27,10 +27,23 @@ export function PhotoSlot({
     try {
       await uploadPhoto(file);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(humanizeError(err, "Upload failed"));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const onRemove = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await removePhoto();
+    } catch (err) {
+      setError(humanizeError(err, "Remove failed"));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -65,12 +78,9 @@ export function PhotoSlot({
       {photoUrl && (
         <button
           type="button"
-          onClick={() => {
-            void removePhoto().catch((err) =>
-              setError(err instanceof Error ? err.message : "Remove failed"),
-            );
-          }}
-          className="absolute -right-1 -top-1 hidden rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-red-600 ring-1 ring-red-200 group-hover/photo:block"
+          disabled={busy}
+          onClick={() => void onRemove()}
+          className="absolute -right-1 -top-1 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-red-600 ring-1 ring-red-200 disabled:opacity-50"
         >
           Remove
         </button>

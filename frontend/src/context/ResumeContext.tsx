@@ -31,6 +31,7 @@ import {
   type TemplateId,
 } from "@/templates/registry";
 import { humanizeError } from "@/lib/errors";
+import { formatResumeProperNouns } from "@/lib/formatDisplay";
 
 const SAVE_DEBOUNCE_MS = 700;
 
@@ -88,21 +89,30 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const skipNextSaveRef = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
 
+  const commitResume = (
+    value: ResumeState | ((current: ResumeState) => ResumeState),
+  ) => {
+    setResumeState((current) => {
+      const next = typeof value === "function" ? value(current) : value;
+      return formatResumeProperNouns(next);
+    });
+  };
+
   const setResume = (
     value: ResumeState | ((current: ResumeState) => ResumeState),
   ) => {
-    setResumeState(value);
+    commitResume(value);
   };
 
   const updateResume = (partial: Partial<ResumeState>) => {
-    setResumeState((current) => ({ ...current, ...partial }));
+    commitResume((current) => ({ ...current, ...partial }));
   };
 
   const applySession = useCallback((session: ResumeSession) => {
     skipNextSaveRef.current = true;
     localStorage.setItem(SESSION_STORAGE_KEY, session.session_id);
     setSessionId(session.session_id);
-    setResumeState(session.data);
+    setResumeState(formatResumeProperNouns(session.data));
     setTemplate(isTemplateId(session.template) ? session.template : "classic");
     setPhotoUrl(session.photo_url ?? null);
     setLlmStatus(session.llm_status ?? "idle");
@@ -290,7 +300,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
           },
           onResume: (payload) => {
             skipNextSaveRef.current = true;
-            setResumeState(payload.data);
+            setResumeState(formatResumeProperNouns(payload.data));
           },
           onStep: (payload) => {
             if (isResumeStep(payload.current_step)) {
