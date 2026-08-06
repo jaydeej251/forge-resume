@@ -13,14 +13,15 @@ Rails.application.routes.draw do
 
       namespace :admin do
         get "stats", to: "stats#show"
-        resources :users, only: [ :index ] do
+        resources :users, only: [ :index, :destroy ] do
           member do
             get :resumes
           end
+          resources :resumes, only: [ :destroy ], param: :session_id, controller: "user_resumes"
         end
       end
 
-      resources :resumes, only: [ :index, :create, :show, :update ], param: :session_id do
+      resources :resumes, only: [ :index, :create, :show, :update, :destroy ], param: :session_id do
         resource :photo, only: [ :create, :destroy ]
         resources :messages, only: [ :create ] do
           collection do

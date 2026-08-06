@@ -23,6 +23,7 @@ type AppTopBarProps = {
   stepIndex: number;
   complete: boolean;
   onReset: () => void;
+  onRetrySave?: () => void;
 };
 
 function saveLabel(status: SaveStatus) {
@@ -50,6 +51,7 @@ export function AppTopBar({
   stepIndex,
   complete,
   onReset,
+  onRetrySave,
 }: AppTopBarProps) {
   const { user } = useAuth();
   const writing = llmStatus === "processing";
@@ -75,30 +77,40 @@ export function AppTopBar({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
-            <span
-              className={[
-                "h-1.5 w-1.5 rounded-full",
-                status === "error"
-                  ? "bg-[var(--danger)]"
-                  : writing
-                    ? "bg-amber-400 pulse-soft"
-                    : status === "ready"
-                      ? saveStatus === "error"
-                        ? "bg-[var(--danger)]"
-                        : "bg-[var(--accent)]"
-                      : "bg-amber-400 pulse-soft",
-              ].join(" ")}
-            />
-            {status === "loading" && "Connecting"}
-            {status === "error" && "Can't load"}
-            {status === "ready" &&
-              (writing
-                ? "AI writing"
-                : complete
-                  ? "Complete"
-                  : saveLabel(saveStatus))}
-          </span>
+          {status === "ready" && saveStatus === "error" && onRetrySave ? (
+            <button
+              type="button"
+              onClick={onRetrySave}
+              disabled={writing}
+              className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-[var(--danger)] underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--danger)]" />
+              Save failed · Retry
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
+              <span
+                className={[
+                  "h-1.5 w-1.5 rounded-full",
+                  status === "error"
+                    ? "bg-[var(--danger)]"
+                    : writing
+                      ? "bg-amber-400 pulse-soft"
+                      : status === "ready"
+                        ? "bg-[var(--accent)]"
+                        : "bg-amber-400 pulse-soft",
+                ].join(" ")}
+              />
+              {status === "loading" && "Connecting"}
+              {status === "error" && "Can't load"}
+              {status === "ready" &&
+                (writing
+                  ? "AI writing"
+                  : complete
+                    ? "Complete"
+                    : saveLabel(saveStatus))}
+            </span>
+          )}
 
           {(complete || status === "ready") && (
             <DownloadPdfButton

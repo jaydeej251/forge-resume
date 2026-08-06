@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/context/AuthContext";
 import {
+  adminDeleteUserRequest,
+  adminDeleteUserResumeRequest,
   adminStatsRequest,
   adminUserResumesRequest,
   adminUsersRequest,
@@ -14,6 +17,11 @@ import {
 } from "@/lib/api";
 import { humanizeError } from "@/lib/errors";
 import { SESSION_STORAGE_KEY } from "@/templates/registry";
+
+type PendingDelete =
+  | { kind: "resume"; resume: ResumeSummary }
+  | { kind: "user"; user: AdminUserRow }
+  | null;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -26,6 +34,17 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingResumes, setLoadingResumes] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const refreshOverview = async () => {
+    const [nextStats, nextUsers] = await Promise.all([
+      adminStatsRequest(),
+      adminUsersRequest(),
+    ]);
+    setStats(nextStats);
+    setUsers(nextUsers.users);
+  };
 
   useEffect(() => {
     if (status === "loading") return;
@@ -38,11 +57,7 @@ export default function AdminPage() {
       return;
     }
 
-    void Promise.all([adminStatsRequest(), adminUsersRequest()])
-      .then(([nextStats, nextUsers]) => {
-        setStats(nextStats);
-        setUsers(nextUsers.users);
-      })
+    void refreshOverview()
       .catch((err) =>
         setError(humanizeError(err, "Failed to load admin data")),
       )
@@ -72,6 +87,54 @@ export default function AdminPage() {
       /* ignore */
     }
     router.push("/builder");
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      if (pendingDelete.kind === "resume") {
+        const userId = selectedId;
+        if (userId == null) throw new Error("Select a user first");
+        await adminDeleteUserResumeRequest(
+          userId,
+          pendingDelete.resume.session_id,
+        );
+        setResumes((rows) =>
+          rows.filter(
+            (row) => row.session_id !== pendingDelete.resume.session_id,
+          ),
+        );
+        try {
+          if (
+            localStorage.getItem(SESSION_STORAGE_KEY) ===
+            pendingDelete.resume.session_id
+          ) {
+            localStorage.removeItem(SESSION_STORAGE_KEY);
+          }
+        } catch {
+          /* ignore */
+        }
+        await refreshOverview();
+      } else {
+        await adminDeleteUserRequest(pendingDelete.user.id);
+        setUsers((rows) =>
+          rows.filter((row) => row.id !== pendingDelete.user.id),
+        );
+        if (selectedId === pendingDelete.user.id) {
+          setSelectedId(null);
+          setSelectedEmail("");
+          setResumes([]);
+        }
+        await refreshOverview();
+      }
+      setPendingDelete(null);
+    } catch (err) {
+      setError(humanizeError(err, "Delete failed"));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (status === "loading" || (user?.is_admin && loading)) {
@@ -112,6 +175,21 @@ export default function AdminPage() {
     { label: "Guest", value: stats?.guest_resumes_count ?? 0 },
   ];
 
+  const dialogTitle =
+    pendingDelete?.kind === "user"
+      ? "Delete this user?"
+      : "Delete this resume?";
+  const dialogBody =
+    pendingDelete?.kind === "user"
+      ? `“${pendingDelete.user.email}” and all of their resumes will be permanently deleted.`
+      : pendingDelete?.kind === "resume"
+        ? `“${
+            pendingDelete.resume.full_name.trim() ||
+            pendingDelete.resume.target_role.trim() ||
+            "Untitled resume"
+          }” will be permanently deleted.`
+        : "";
+
   return (
     <div className="min-h-dvh bg-[var(--panel)]">
       <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
@@ -127,7 +205,7 @@ export default function AdminPage() {
               Admin
             </h1>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Read-only overview · signed in as {user.email}
+              Manage users &amp; resumes · signed in as {user.email}
             </p>
           </div>
           <Link
@@ -151,11 +229,7 @@ export default function AdminPage() {
                 }
                 setLoading(true);
                 setError(null);
-                void Promise.all([adminStatsRequest(), adminUsersRequest()])
-                  .then(([nextStats, nextUsers]) => {
-                    setStats(nextStats);
-                    setUsers(nextUsers.users);
-                  })
+                void refreshOverview()
                   .catch((err) =>
                     setError(humanizeError(err, "Failed to load admin data")),
                   )
@@ -195,27 +269,34 @@ export default function AdminPage() {
                   <th className="px-4 py-3 font-semibold">Provider</th>
                   <th className="px-4 py-3 font-semibold">Joined</th>
                   <th className="px-4 py-3 font-semibold">Resumes</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((row) => {
                   const active = selectedId === row.id;
+                  const isSelf = row.id === user.id;
                   return (
                     <tr
                       key={row.id}
-                      onClick={() => void loadUserResumes(row)}
                       className={[
-                        "cursor-pointer border-b border-[var(--line)]/70 last:border-0 transition",
+                        "border-b border-[var(--line)]/70 last:border-0 transition",
                         active ? "bg-[var(--accent-soft)]/50" : "hover:bg-slate-50",
                       ].join(" ")}
                     >
                       <td className="px-4 py-3 font-medium text-[var(--ink)]">
-                        {row.email}
-                        {row.is_admin && (
-                          <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
-                            admin
-                          </span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => void loadUserResumes(row)}
+                          className="cursor-pointer text-left hover:underline"
+                        >
+                          {row.email}
+                          {row.is_admin && (
+                            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                              admin
+                            </span>
+                          )}
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-[var(--ink-soft)]">
                         {row.name || "—"}
@@ -227,13 +308,28 @@ export default function AdminPage() {
                       <td className="px-4 py-3 font-semibold text-[var(--ink)]">
                         {row.resumes_count}
                       </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          disabled={isSelf}
+                          title={
+                            isSelf
+                              ? "You can't delete your own admin account here"
+                              : "Delete user"
+                          }
+                          onClick={() => setPendingDelete({ kind: "user", user: row })}
+                          className="cursor-pointer text-xs font-semibold text-[var(--danger)] hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
                 {users.length === 0 && (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-4 py-8 text-center text-[var(--muted)]"
                     >
                       No users yet.
@@ -247,13 +343,11 @@ export default function AdminPage() {
 
         <section className="mt-10">
           <h2 className="text-lg font-semibold text-[var(--ink)]">
-            {selectedId
-              ? `Resumes · ${selectedEmail}`
-              : "Resumes"}
+            {selectedId ? `Resumes · ${selectedEmail}` : "Resumes"}
           </h2>
           {!selectedId && (
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Select a user to inspect their resumes.
+              Select a user to inspect or delete their resumes.
             </p>
           )}
           {loadingResumes && (
@@ -271,11 +365,14 @@ export default function AdminPage() {
                 resume.target_role.trim() ||
                 "Untitled resume";
               return (
-                <li key={resume.id}>
+                <li
+                  key={resume.id}
+                  className="flex items-stretch gap-2 rounded-xl border border-[var(--line)] bg-white p-2"
+                >
                   <button
                     type="button"
                     onClick={() => openResume(resume.session_id)}
-                    className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-xl border border-[var(--line)] bg-white px-4 py-3 text-left transition hover:border-teal-700/35"
+                    className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-4 rounded-lg px-3 py-2 text-left transition hover:bg-slate-50"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-[var(--ink)]">
@@ -290,12 +387,36 @@ export default function AdminPage() {
                       Open →
                     </span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPendingDelete({ kind: "resume", resume })
+                    }
+                    className="shrink-0 cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--danger)] hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
                 </li>
               );
             })}
           </ul>
         </section>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={dialogTitle}
+        body={dialogBody}
+        confirmLabel={deleting ? "Deleting…" : "Delete"}
+        cancelLabel="Keep"
+        danger
+        onCancel={() => {
+          if (!deleting) setPendingDelete(null);
+        }}
+        onConfirm={() => {
+          if (!deleting) void confirmDelete();
+        }}
+      />
     </div>
   );
 }

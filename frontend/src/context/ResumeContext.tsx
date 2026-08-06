@@ -63,6 +63,7 @@ type ResumeContextValue = {
   changeTemplate: (template: TemplateId) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
   clearLlmError: () => void;
+  retrySave: () => Promise<void>;
   uploadPhoto: (file: File) => Promise<void>;
   removePhoto: () => Promise<void>;
 };
@@ -379,6 +380,17 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [resume, sessionId, status, llmStatus]);
 
+  const retrySave = async () => {
+    if (!sessionId || status !== "ready" || llmStatus === "processing") return;
+    setSaveStatus("saving");
+    try {
+      await updateResumeSession(sessionId, resume);
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+    }
+  };
+
   return (
     <ResumeContext.Provider
       value={{
@@ -406,6 +418,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         changeTemplate,
         sendMessage,
         clearLlmError,
+        retrySave,
         uploadPhoto,
         removePhoto,
       }}

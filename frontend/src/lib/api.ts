@@ -211,6 +211,19 @@ export async function listResumesRequest(): Promise<{ resumes: ResumeSummary[] }
   return parseJson(response);
 }
 
+export async function deleteResumeRequest(sessionId: string): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/api/v1/resumes/${encodeURIComponent(sessionId)}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+  if (!response.ok) {
+    await parseJson(response);
+  }
+}
+
 export async function adminStatsRequest(): Promise<AdminStats> {
   const response = await fetch(`${API_URL}/api/v1/admin/stats`, {
     method: "GET",
@@ -227,6 +240,16 @@ export async function adminUsersRequest(): Promise<{ users: AdminUserRow[] }> {
   return parseJson(response);
 }
 
+export async function adminDeleteUserRequest(userId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/api/v1/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    await parseJson(response);
+  }
+}
+
 export async function adminUserResumesRequest(
   userId: number,
 ): Promise<{
@@ -241,6 +264,22 @@ export async function adminUserResumesRequest(
     },
   );
   return parseJson(response);
+}
+
+export async function adminDeleteUserResumeRequest(
+  userId: number,
+  sessionId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/api/v1/admin/users/${userId}/resumes/${encodeURIComponent(sessionId)}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+  if (!response.ok) {
+    await parseJson(response);
+  }
 }
 
 export async function createResumeSession(

@@ -29,6 +29,21 @@ module Api
           }
         end
 
+        def destroy
+          user = User.find(params[:id])
+          if user.id == current_user.id
+            return render json: { error: "You can't delete your own admin account from here." },
+                          status: :unprocessable_entity
+          end
+
+          ActiveRecord::Base.transaction do
+            user.resumes.find_each(&:destroy!)
+            user.destroy!
+          end
+
+          head :no_content
+        end
+
         private
 
         def admin_user_json(user)

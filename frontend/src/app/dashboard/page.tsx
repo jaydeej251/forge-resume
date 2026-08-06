@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/context/AuthContext";
-import { listResumesRequest, type ResumeSummary } from "@/lib/api";
+import {
+  deleteResumeRequest,
+  listResumesRequest,
+  type ResumeSummary,
+} from "@/lib/api";
 import { humanizeError } from "@/lib/errors";
 import { SESSION_STORAGE_KEY } from "@/templates/registry";
 
@@ -14,6 +19,8 @@ export default function DashboardPage() {
   const [resumes, setResumes] = useState<ResumeSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<ResumeSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -64,6 +71,30 @@ export default function DashboardPage() {
     router.push("/builder");
   };
 
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteResumeRequest(pendingDelete.session_id);
+      setResumes((rows) =>
+        rows.filter((row) => row.session_id !== pendingDelete.session_id),
+      );
+      try {
+        if (localStorage.getItem(SESSION_STORAGE_KEY) === pendingDelete.session_id) {
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
+      } catch {
+        /* ignore */
+      }
+      setPendingDelete(null);
+    } catch (err) {
+      setError(humanizeError(err, "Failed to delete resume"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (status === "loading" || (user && loading)) {
     return (
       <div className="min-h-dvh bg-[var(--panel)] px-5 py-16 text-sm text-[var(--muted)]">
@@ -73,6 +104,11 @@ export default function DashboardPage() {
   }
 
   if (!user) return null;
+
+  const pendingTitle =
+    pendingDelete?.full_name.trim() ||
+    pendingDelete?.target_role.trim() ||
+    "Untitled resume";
 
   return (
     <div className="min-h-dvh bg-[var(--panel)]">
@@ -155,11 +191,14 @@ export default function DashboardPage() {
               resume.target_role.trim() ||
               "Untitled resume";
             return (
-              <li key={resume.id}>
+              <li
+                key={resume.id}
+                className="flex items-stretch gap-2 rounded-2xl border border-[var(--line)] bg-white p-2"
+              >
                 <button
                   type="button"
                   onClick={() => openResume(resume.session_id)}
-                  className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-2xl border border-[var(--line)] bg-white px-4 py-4 text-left transition hover:border-teal-700/35 hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
+                  className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-4 rounded-xl px-3 py-3 text-left transition hover:bg-slate-50"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-[var(--ink)]">
@@ -167,20 +206,40 @@ export default function DashboardPage() {
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
                       {resume.template} · {resume.step_label}
-                      {resume.target_role
-                        ? ` · ${resume.target_role}`
-                        : ""}
+                      {resume.target_role ? ` · ${resume.target_role}` : ""}
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">
                     Open →
                   </span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingDelete(resume)}
+                  className="shrink-0 cursor-pointer rounded-xl px-3 py-2 text-xs font-semibold text-[var(--danger)] hover:bg-red-50"
+                >
+                  Delete
+                </button>
               </li>
             );
           })}
         </ul>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete this resume?"
+        body={`“${pendingTitle}” will be permanently deleted. This can’t be undone.`}
+        confirmLabel={deleting ? "Deleting…" : "Delete resume"}
+        cancelLabel="Keep"
+        danger
+        onCancel={() => {
+          if (!deleting) setPendingDelete(null);
+        }}
+        onConfirm={() => {
+          if (!deleting) void confirmDelete();
+        }}
+      />
     </div>
   );
 }

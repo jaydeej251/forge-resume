@@ -27,6 +27,7 @@ export function BuilderShell() {
     error,
     resetSession,
     reloadSession,
+    retrySave,
     currentStep,
     stepIndex,
     messages,
@@ -103,6 +104,7 @@ export function BuilderShell() {
         stepIndex={stepIndex}
         complete={complete}
         onReset={requestNew}
+        onRetrySave={() => void retrySave()}
       />
 
       {status === "error" && (

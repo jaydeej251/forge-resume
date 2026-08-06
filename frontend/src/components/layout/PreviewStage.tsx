@@ -51,18 +51,23 @@ export function PreviewStage({
               : "Switch templates anytime. Content stays; photo shows when the template allows."}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="hidden lg:block">
-            <TemplateSwitcher />
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="hidden lg:block">
+              <TemplateSwitcher />
+            </div>
+            <DownloadPdfButton
+              resume={resume}
+              template={template}
+              photoUrl={templateSupportsPhoto(template) ? photoUrl : null}
+              variant={complete ? "accent" : "ghost"}
+              size="sm"
+              className="hidden lg:inline-flex"
+            />
           </div>
-          <DownloadPdfButton
-            resume={resume}
-            template={template}
-            photoUrl={templateSupportsPhoto(template) ? photoUrl : null}
-            variant={complete ? "accent" : "ghost"}
-            size="sm"
-            className="hidden lg:inline-flex"
-          />
+          <p className="hidden max-w-xs text-right text-[10px] leading-relaxed text-[var(--muted)] lg:block">
+            AI-assisted draft — review on the canvas before sharing.
+          </p>
         </div>
       </div>
 
@@ -99,6 +104,9 @@ export function PreviewStage({
             variant={complete ? "accent" : "primary"}
             className="w-full justify-center"
           />
+          <p className="text-center text-[10px] leading-relaxed text-[var(--muted)]">
+            AI-assisted draft — review on the canvas before sharing.
+          </p>
         </div>
       )}
     </section>

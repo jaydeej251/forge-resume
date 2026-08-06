@@ -51,6 +51,7 @@ class ApplicationController < ActionController::API
   end
 
   def authorize_resume!(resume)
+    return true if current_user_admin?
     return true if resume.accessible_by?(current_user)
 
     render json: { error: "Forbidden" }, status: :forbidden

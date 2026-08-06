@@ -2,7 +2,7 @@ module Api
   module V1
     class ResumesController < ApplicationController
       before_action :authenticate_user!, only: [ :index ]
-      before_action :set_resume, only: [ :show, :update ]
+      before_action :set_resume, only: [ :show, :update, :destroy ]
 
       def index
         resumes = current_user.resumes.order(updated_at: :desc)
@@ -64,6 +64,21 @@ module Api
         else
           render json: { errors: @resume.errors.full_messages }, status: :unprocessable_entity
         end
+      end
+
+      def destroy
+        return unless authorize_resume!(@resume)
+
+        # Owners and admins may delete; guests may delete unowned drafts by session id.
+        if @resume.owned? && current_user.blank?
+          return render json: { error: "Forbidden" }, status: :forbidden
+        end
+        if @resume.owned? && !current_user_admin? && @resume.user_id != current_user.id
+          return render json: { error: "Forbidden" }, status: :forbidden
+        end
+
+        @resume.destroy!
+        head :no_content
       end
 
       private
