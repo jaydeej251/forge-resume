@@ -17,7 +17,7 @@ export const STEP_LABELS: Record<ResumeStep, string> = {
 };
 
 export const STEP_HINTS: Record<ResumeStep, string> = {
-  basics: "Name, email, and target role — we'll draft your summary next",
+  basics: "Name, email, and target role — we'll draft summary & skills together",
   summary: "Summary is on the canvas — looks good, or generate a new one",
   skills: "Skills are on the canvas — looks good, or generate new skills",
   experience: "Paste a role — we'll expand it into ~5 bullets (3 key + 2 supporting)",

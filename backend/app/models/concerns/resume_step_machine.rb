@@ -24,10 +24,11 @@ module ResumeStepMachine
       Let's build your resume.
       Tell me your full name, email, and the role you're applying for
       (example: "I'm Jane Doe, jane@email.com, applying for Software Engineer").
+      I'll draft your summary and skills in one pass for the live canvas.
     TEXT
     "summary" => <<~TEXT.freeze,
-      Your professional summary is already on the live canvas (about 3–5 sentences).
-      Say "looks good" to continue, or "generate a new summary" if you want a different draft.
+      Your professional summary and skills are already on the live canvas.
+      For the summary: say "looks good" to continue, or "generate a new summary" for another draft.
       You can also tell me what to emphasize.
     TEXT
     "skills" => <<~TEXT.freeze,

@@ -22,27 +22,26 @@ class ResumeEnhancer
   STEP_FOCUS = {
     "basics" => <<~TEXT.freeze,
       STAGE 1 — Basics: need full_name, email, target_role (optional phone/location).
-      When those three are present in this turn:
+      When those three are present in this turn (one LLM call — token-efficient):
       - set personal_info
       - draft a polished professional summary of 3–5 sentences for the target_role
         (no invented employers/schools; focus on role positioning and strengths)
+      - draft skills.technical and skills.soft as short labels for that role
       - set advance_step=true
-      - assistant_message should confirm the summary was added to the live resume and invite
-        "looks good" or "generate a new summary" (skills come next after they approve)
+      - assistant_message should confirm summary + skills were added to the live resume, and invite
+        reviewing the summary next ("looks good" or "generate a new summary")
       If missing fields, ask for name + email + target role in ONE message. Do not advance.
     TEXT
     "summary" => <<~TEXT.freeze,
-      STAGE 2 — Summary review: a 3–5 sentence summary should already be on the resume.
-      If summary is empty, write a strong 3–5 sentence draft now.
-      If the user asks to generate/regenerate/rewrite a new summary: rewrite summary (3–5 sentences),
-      keep advance_step=false, invite looks good again.
-      If they approve (looks good / continue / next) and summary is non-empty:
-      - also draft skills.technical and skills.soft for the target_role if skills are thin/empty
-      - set advance_step=true
-      If they request edits (emphasize X, shorter, etc.), update summary and stay — advance_step=false.
+      STAGE 2 — Summary review only. Summary and skills should already exist from basics.
+      If summary is empty, write a strong 3–5 sentence draft (do not wipe existing skills unless asked).
+      If the user asks to generate/regenerate/rewrite a new summary: rewrite summary only (3–5 sentences),
+      keep skills unless they ask otherwise, advance_step=false, invite looks good again.
+      If they approve (looks good / continue / next) and summary is non-empty: set advance_step=true.
+      Do not call for skill regeneration here unless the user explicitly asks to change skills.
     TEXT
     "skills" => <<~TEXT.freeze,
-      STAGE 3 — Skills review: skills should already be suggested.
+      STAGE 3 — Skills review only. Skills should already exist from basics.
       If skills are empty, suggest a focused technical + soft list now.
       If they ask to generate/regenerate new skills: rewrite the lists, advance_step=false.
       If they approve and at least one skill exists: advance_step=true.
@@ -126,6 +125,19 @@ class ResumeEnhancer
       }
     end
 
+    if step == "summary" && approval_phrase? && @resume.requirements_met_for?("summary")
+      # Prefer no LLM: skills were drafted with the summary during basics.
+      # If skills are somehow empty, fall through so the model can fill them.
+      if @resume.requirements_met_for?("skills")
+        return {
+          resume_data: deep_copy(@resume.data),
+          assistant_message: "Locked in. Next, glance at skills — say looks good or generate new skills.",
+          advance_step: true,
+          skipped_llm: true
+        }
+      end
+    end
+
     if step == "skills" && approval_phrase? && @resume.requirements_met_for?("skills")
       return {
         resume_data: deep_copy(@resume.data),
@@ -184,14 +196,14 @@ class ResumeEnhancer
       else
         case @resume.current_step
         when "basics"
-          "Fill personal_info AND draft a 3-5 sentence summary when name/email/target_role present. advance_step=true. Do not draft skills yet."
+          "Fill personal_info AND draft a 3-5 sentence summary AND skills.technical/skills.soft in this same response when name/email/target_role present. advance_step=true."
         when "summary"
           if regenerate_request?
-            "Rewrite a fresh 3-5 sentence summary. advance_step=false. Invite looks good or generate a new summary."
+            "Rewrite a fresh 3-5 sentence summary only. Keep skills. advance_step=false. Invite looks good or generate a new summary."
           elsif approval_phrase? && @resume.requirements_met_for?("summary")
-            "User approved the summary. Keep summary. Draft skills if empty/thin. advance_step=true."
+            "User approved the summary. Keep existing summary/skills. Only fill skills if empty. advance_step=true."
           else
-            "Refine the existing summary (keep 3-5 sentences) or draft if empty. Invite looks good / generate a new summary."
+            "Refine the existing summary (keep 3-5 sentences) or draft if empty. Keep skills unless asked. Invite looks good / generate a new summary."
           end
         when "skills"
           if regenerate_request?
