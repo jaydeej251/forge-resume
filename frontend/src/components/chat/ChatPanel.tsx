@@ -252,6 +252,9 @@ export function ChatPanel({
                 </button>
               </div>
             </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">
+              AI-assisted draft — review on the canvas before sharing.
+            </p>
           </div>
         )}
 

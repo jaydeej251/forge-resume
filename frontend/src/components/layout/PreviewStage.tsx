@@ -47,7 +47,7 @@ export function PreviewStage({
           <p className="text-sm font-semibold text-[var(--ink)]">Live canvas</p>
           <p className="text-xs text-[var(--muted)]">
             {complete
-              ? "Final review — switch styles anytime, then export."
+              ? "Final review — AI-assisted draft, check the canvas before sharing."
               : "Switch templates anytime. Content stays; photo shows when the template allows."}
           </p>
         </div>
@@ -65,8 +65,8 @@ export function PreviewStage({
               className="hidden lg:inline-flex"
             />
           </div>
-          <p className="hidden max-w-xs text-right text-[10px] leading-relaxed text-[var(--muted)] lg:block">
-            AI-assisted draft — review on the canvas before sharing.
+          <p className="max-w-xs text-right text-[10px] leading-relaxed text-[var(--muted)]">
+            AI-assisted draft — review before sharing.
           </p>
         </div>
       </div>
