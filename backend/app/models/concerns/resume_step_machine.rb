@@ -26,14 +26,13 @@ module ResumeStepMachine
       (example: "I'm Jane Doe, jane@email.com, applying for Software Engineer").
     TEXT
     "summary" => <<~TEXT.freeze,
-      Step 2 — Summary.
-      I'll draft a short professional summary for your target role.
-      Tell me what to emphasize, paste your own draft, or say "looks good" to continue.
+      Your professional summary is already on the live canvas (about 3–5 sentences).
+      Say "looks good" to continue, or "generate a new summary" if you want a different draft.
+      You can also tell me what to emphasize.
     TEXT
     "skills" => <<~TEXT.freeze,
-      Step 3 — Skills.
-      I'll suggest technical and soft skills for your role.
-      Add or remove skills, or say "looks good" when the list is ready.
+      Suggested skills are on the live canvas.
+      Say "looks good" to continue, tell me what to add or remove, or "generate new skills".
     TEXT
     "experience" => <<~TEXT.freeze,
       Step 4 — Experience.

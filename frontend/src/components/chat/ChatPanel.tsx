@@ -16,8 +16,8 @@ import { templateSupportsPhoto } from "@/templates/registry";
 
 const PLACEHOLDERS: Record<ResumeStep, string> = {
   basics: "e.g. Matt Santos, matt@email.com, Software Engineer",
-  summary: "e.g. Emphasize B2B sales and customer demos — or looks good",
-  skills: "e.g. Add Salesforce, remove Excel — or looks good",
+  summary: "e.g. Emphasize leadership — or tap a suggestion below",
+  skills: "e.g. Add Salesforce — or tap a suggestion below",
   experience: "e.g. Acme Corp, Sales Engineer, 2017–2023. Did X and Y…",
   education: "e.g. Patts College, BS Aeronautical Engineering, 2012–2017",
 };
@@ -27,14 +27,8 @@ const SUGGESTIONS: Record<ResumeStep, string[]> = {
     "I'm Alex Rivera, alex@email.com, applying for Product Designer",
     "Jordan Lee, jordan@work.com, Software Engineer",
   ],
-  summary: [
-    "Draft a summary for my target role",
-    "looks good",
-  ],
-  skills: [
-    "Suggest skills for my role",
-    "looks good",
-  ],
+  summary: ["looks good", "generate a new summary"],
+  skills: ["looks good", "generate new skills"],
   experience: [
     "Acme Corp, Sales Engineer, 2019–2023. Closed deals and ran demos.",
     "done",
@@ -198,7 +192,10 @@ export function ChatPanel({
                 onClick={() => void submit(chip)}
                 className="suggestion-chip cursor-pointer disabled:opacity-50"
               >
-                {chip === "done" || chip === "skip" || chip === "looks good"
+                {chip === "done" ||
+                chip === "skip" ||
+                chip === "looks good" ||
+                chip.startsWith("generate")
                   ? chip
                   : truncateChip(chip)}
               </button>

@@ -22,22 +22,29 @@ class ResumeEnhancer
   STEP_FOCUS = {
     "basics" => <<~TEXT.freeze,
       STAGE 1 — Basics: need full_name, email, target_role (optional phone/location).
-      Do NOT draft a long summary or skills list yet — later stages cover those.
-      When name/email/target_role are present: set personal_info, set advance_step=true,
-      invite them to the summary step next.
-      If missing fields, ask for name + email + target role in ONE message.
+      When those three are present in this turn:
+      - set personal_info
+      - draft a polished professional summary of 3–5 sentences for the target_role
+        (no invented employers/schools; focus on role positioning and strengths)
+      - set advance_step=true
+      - assistant_message should confirm the summary was added to the live resume and invite
+        "looks good" or "generate a new summary" (skills come next after they approve)
+      If missing fields, ask for name + email + target role in ONE message. Do not advance.
     TEXT
     "summary" => <<~TEXT.freeze,
-      STAGE 2 — Summary: draft or refine a 2–4 sentence professional summary for target_role.
-      Use known personal_info + any experience already on the resume. Do not invent employers.
-      If summary is empty, write a strong draft and ask them to tweak or say "looks good".
-      If they approve (looks good / continue / next) and summary is non-empty: advance_step=true.
-      If they request edits, update summary and ask again — advance_step=false until they approve
-      or clearly provide a finished summary and want to move on.
+      STAGE 2 — Summary review: a 3–5 sentence summary should already be on the resume.
+      If summary is empty, write a strong 3–5 sentence draft now.
+      If the user asks to generate/regenerate/rewrite a new summary: rewrite summary (3–5 sentences),
+      keep advance_step=false, invite looks good again.
+      If they approve (looks good / continue / next) and summary is non-empty:
+      - also draft skills.technical and skills.soft for the target_role if skills are thin/empty
+      - set advance_step=true
+      If they request edits (emphasize X, shorter, etc.), update summary and stay — advance_step=false.
     TEXT
     "skills" => <<~TEXT.freeze,
-      STAGE 3 — Skills: fill skills.technical and skills.soft with short labels for the role.
-      If skills are empty, suggest a focused list and ask them to add/remove or say "looks good".
+      STAGE 3 — Skills review: skills should already be suggested.
+      If skills are empty, suggest a focused technical + soft list now.
+      If they ask to generate/regenerate new skills: rewrite the lists, advance_step=false.
       If they approve and at least one skill exists: advance_step=true.
       Preserve personal_info/summary unless the user corrects them.
     TEXT
@@ -96,7 +103,7 @@ class ResumeEnhancer
     {
       resume_data: resume_data,
       assistant_message: sanitize_assistant_message(payload.fetch("assistant_message")),
-      advance_step: polish_mode? ? false : (ActiveModel::Type::Boolean.new.cast(payload["advance_step"]) || done_signal?),
+      advance_step: polish_mode? || regenerate_request? ? false : (ActiveModel::Type::Boolean.new.cast(payload["advance_step"]) || (done_signal? && !regenerate_request?)),
       skipped_llm: false
     }
   end
@@ -119,11 +126,10 @@ class ResumeEnhancer
       }
     end
 
-    if %w[summary skills].include?(step) && approval_phrase? && @resume.requirements_met_for?(step)
-      next_label = step == "summary" ? "skills" : "experience"
+    if step == "skills" && approval_phrase? && @resume.requirements_met_for?("skills")
       return {
         resume_data: deep_copy(@resume.data),
-        assistant_message: "Locked in. Next up is #{next_label}.",
+        assistant_message: "Locked in. Next up is experience — paste a role whenever you're ready.",
         advance_step: true,
         skipped_llm: true
       }
@@ -178,18 +184,22 @@ class ResumeEnhancer
       else
         case @resume.current_step
         when "basics"
-          "Fill personal_info only. Do not invent summary/skills yet. advance_step when name/email/target_role present."
+          "Fill personal_info AND draft a 3-5 sentence summary when name/email/target_role present. advance_step=true. Do not draft skills yet."
         when "summary"
-          if approval_phrase? && @resume.requirements_met_for?("summary")
-            "User approved the summary. Keep summary. advance_step=true."
+          if regenerate_request?
+            "Rewrite a fresh 3-5 sentence summary. advance_step=false. Invite looks good or generate a new summary."
+          elsif approval_phrase? && @resume.requirements_met_for?("summary")
+            "User approved the summary. Keep summary. Draft skills if empty/thin. advance_step=true."
           else
-            "Draft or refine summary for the target role. Invite approval with looks good."
+            "Refine the existing summary (keep 3-5 sentences) or draft if empty. Invite looks good / generate a new summary."
           end
         when "skills"
-          if approval_phrase? && @resume.requirements_met_for?("skills")
+          if regenerate_request?
+            "Rewrite fresh skills.technical and skills.soft. advance_step=false."
+          elsif approval_phrase? && @resume.requirements_met_for?("skills")
             "User approved skills. Keep skills. advance_step=true."
           else
-            "Draft or refine skills.technical and skills.soft. Invite approval with looks good."
+            "Draft or refine skills.technical and skills.soft. Invite looks good or generate new skills."
           end
         when "experience"
           if done_signal?
@@ -237,6 +247,12 @@ class ResumeEnhancer
 
   def approval_phrase?
     @user_message.to_s.match?(/\A\s*(?:looks good|lgtm|good|ok|okay|continue|next|ready|done)\s*[.!]?\s*\z/i)
+  end
+
+  def regenerate_request?
+    @user_message.to_s.match?(/\b(generate|regenerate|rewrite|another|new)\b.+\b(summary|skills?)\b|\b(summary|skills?)\b.+\b(again|new)\b/i) ||
+      @user_message.to_s.match?(/\A\s*generate a new summary\s*[.!]?\s*\z/i) ||
+      @user_message.to_s.match?(/\A\s*generate new skills\s*[.!]?\s*\z/i)
   end
 
   def skip_phrase?
