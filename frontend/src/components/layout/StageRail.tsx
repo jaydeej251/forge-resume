@@ -47,7 +47,7 @@ export function StageRail({
               </div>
               <p
                 className={[
-                  "mt-1 truncate text-[10px] font-semibold tracking-wide",
+                  "mt-1 truncate text-[9px] font-semibold tracking-wide sm:text-[10px]",
                   active
                     ? "text-[var(--ink)]"
                     : done

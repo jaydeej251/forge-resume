@@ -3,29 +3,40 @@
 module ResumeStepMachine
   extend ActiveSupport::Concern
 
-  # Fast guided flow (not field-by-field interview):
-  # 1) basics — name, email, target role → AI drafts summary + skills
-  # 2) experience — user dumps roles → AI writes bullets
-  # 3) education — finalize (or skip)
-  STEPS = %w[basics experience education].freeze
+  # Guided coach flow:
+  # 1) basics — name, email, target role
+  # 2) summary — draft / refine professional summary
+  # 3) skills — draft / refine technical + soft skills
+  # 4) experience — roles + bullets (repeatable until "done")
+  # 5) education — school/degree or skip; then polish mode stays open
+  STEPS = %w[basics summary skills experience education].freeze
 
   STEP_LABELS = {
     "basics" => "Basics",
+    "summary" => "Summary",
+    "skills" => "Skills",
     "experience" => "Experience",
     "education" => "Education"
   }.freeze
 
   STEP_PROMPTS = {
     "basics" => <<~TEXT.freeze,
-      Let's build your resume fast.
+      Let's build your resume.
       Tell me your full name, email, and the role you're applying for
       (example: "I'm Jane Doe, jane@email.com, applying for Software Engineer").
-
-      I'll draft a professional summary and suggested skills for that role.
-      You can tweak anything on the live preview to the right.
+    TEXT
+    "summary" => <<~TEXT.freeze,
+      Step 2 — Summary.
+      I'll draft a short professional summary for your target role.
+      Tell me what to emphasize, paste your own draft, or say "looks good" to continue.
+    TEXT
+    "skills" => <<~TEXT.freeze,
+      Step 3 — Skills.
+      I'll suggest technical and soft skills for your role.
+      Add or remove skills, or say "looks good" when the list is ready.
     TEXT
     "experience" => <<~TEXT.freeze,
-      Step 2 — Experience.
+      Step 4 — Experience.
       Paste a role in any format (company, title, dates, rough duties).
       Even a short note is enough — I'll expand it into about 5 strong bullets
       (3 key + 2 supporting). Add more roles anytime, then say "done".
@@ -33,6 +44,7 @@ module ResumeStepMachine
     "education" => <<~TEXT.freeze
       Final step — Education.
       Add school, degree, and year (rough notes are fine), or type "skip" to finish.
+      After this you can keep chatting to polish anything on the resume.
     TEXT
   }.freeze
 
@@ -91,6 +103,13 @@ module ResumeStepMachine
         missing << "email" if info["email"].to_s.strip.blank?
         missing << "target_role" if info["target_role"].to_s.strip.blank?
       end
+    when "summary"
+      payload["summary"].to_s.strip.present? ? [] : [ "summary" ]
+    when "skills"
+      skills = payload["skills"] || {}
+      tech = Array(skills["technical"]).map { |s| s.to_s.strip }.reject(&:blank?)
+      soft = Array(skills["soft"]).map { |s| s.to_s.strip }.reject(&:blank?)
+      (tech + soft).any? ? [] : [ "skills" ]
     when "experience"
       Array(payload["work_experience"]).any? { |job|
         job["company"].to_s.strip.present? && job["position"].to_s.strip.present?
@@ -103,40 +122,37 @@ module ResumeStepMachine
   end
 
   def requirements_met_for?(step = current_step)
-    payload = data.is_a?(Hash) ? data : {}
+    missing_fields_for(step).empty?
+  end
 
-    case step.to_s
-    when "basics"
-      info = payload["personal_info"] || {}
-      info["full_name"].to_s.strip.present? &&
-        info["email"].to_s.strip.present? &&
-        info["target_role"].to_s.strip.present? &&
-        payload["summary"].to_s.strip.present?
-    when "experience"
-      Array(payload["work_experience"]).any? do |job|
-        job["company"].to_s.strip.present? && job["position"].to_s.strip.present?
-      end
-    when "education"
-      Array(payload["education"]).any? { |edu| edu["institution"].to_s.strip.present? }
-    else
-      false
-    end
+  def education_stage_done?
+    return true if requirements_met_for?("education")
+
+    resume_messages.where(role: "user").any? { |message| message.content.to_s.match?(/\bskip\b/i) }
+  end
+
+  def flow_complete?
+    last_step? && education_stage_done?
   end
 
   def advance_step_if_allowed!(advance_requested:, user_message: "")
     return false if last_step?
+    return false if flow_complete?
 
     skip_requested = user_message.to_s.match?(/\bskip\b/i)
     ready = requirements_met_for?(current_step) || (current_step == "education" && skip_requested)
     return false unless ready
 
     explicit_continue = advance_requested ||
-      user_message.to_s.match?(/\b(next|continue|done|skip|that'?s all|ready|finish)\b/i)
+      user_message.to_s.match?(/\b(next|continue|done|skip|that'?s all|ready|finish|looks good)\b/i)
 
     should_advance =
       case current_step
       when "basics"
         ready
+      when "summary", "skills"
+        # Wait for an explicit user okay after the draft lands.
+        ready && user_message.to_s.match?(/\b(next|continue|done|skip|that'?s all|ready|finish|looks good|lgtm|ok|okay)\b/i)
       when "experience"
         # Stay here until user is done adding roles.
         explicit_continue

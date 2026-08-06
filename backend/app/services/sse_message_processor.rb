@@ -107,9 +107,11 @@ class SseMessageProcessor
   end
 
   def flow_complete?
-    return false unless @resume.last_step?
-
-    @resume.requirements_met_for?("education") || @content.match?(/\bskip\b/i)
+    @resume.flow_complete? || (
+      @resume.last_step? && (
+        @resume.requirements_met_for?("education") || @content.match?(/\bskip\b/i)
+      )
+    )
   end
 
   def handle_failure(assistant_message, error)

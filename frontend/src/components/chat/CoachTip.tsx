@@ -31,7 +31,7 @@ export function CoachTip() {
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs leading-relaxed text-[var(--ink-soft)] sm:text-[13px]">
           <span className="font-semibold text-[var(--ink)]">Quick tip: </span>
-          Chat drafts your content · tap the canvas to edit · download when ready.
+          Chat drafts step by step · tap the canvas to edit · keep chatting after you're ready.
         </p>
         <button
           type="button"

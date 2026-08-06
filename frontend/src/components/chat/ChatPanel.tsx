@@ -6,22 +6,34 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { DownloadPdfButton } from "@/components/pdf/DownloadPdfButton";
 import { useResume } from "@/context/ResumeContext";
 import { humanizeError } from "@/lib/errors";
-import { isFlowComplete, STEP_HINTS } from "@/types/steps";
+import {
+  isFlowComplete,
+  isResumeStep,
+  STEP_HINTS,
+  type ResumeStep,
+} from "@/types/steps";
 import { templateSupportsPhoto } from "@/templates/registry";
 
-const PLACEHOLDERS = {
+const PLACEHOLDERS: Record<ResumeStep, string> = {
   basics: "e.g. Matt Santos, matt@email.com, Software Engineer",
+  summary: "e.g. Emphasize B2B sales and customer demos — or looks good",
+  skills: "e.g. Add Salesforce, remove Excel — or looks good",
   experience: "e.g. Acme Corp, Sales Engineer, 2017–2023. Did X and Y…",
   education: "e.g. Patts College, BS Aeronautical Engineering, 2012–2017",
-} as const;
+};
 
-const SUGGESTIONS: Record<
-  "basics" | "experience" | "education",
-  string[]
-> = {
+const SUGGESTIONS: Record<ResumeStep, string[]> = {
   basics: [
     "I'm Alex Rivera, alex@email.com, applying for Product Designer",
     "Jordan Lee, jordan@work.com, Software Engineer",
+  ],
+  summary: [
+    "Draft a summary for my target role",
+    "looks good",
+  ],
+  skills: [
+    "Suggest skills for my role",
+    "looks good",
   ],
   experience: [
     "Acme Corp, Sales Engineer, 2019–2023. Closed deals and ran demos.",
@@ -32,6 +44,12 @@ const SUGGESTIONS: Record<
     "skip",
   ],
 };
+
+const COMPLETE_SUGGESTIONS = [
+  "Tighten my summary",
+  "Add another role at...",
+  "Make my bullets more specific",
+];
 
 type ChatPanelProps = {
   onViewPreview?: () => void;
@@ -76,6 +94,8 @@ export function ChatPanel({
     [flowComplete, currentStep, resume.education.length, messages],
   );
 
+  const step: ResumeStep = isResumeStep(currentStep) ? currentStep : "basics";
+
   useEffect(() => {
     const last = messages[messages.length - 1];
     const scrollKey = `${messages.length}:${last?.id ?? ""}:${last?.content.length ?? 0}:${llmStatus}`;
@@ -117,8 +137,10 @@ export function ChatPanel({
   };
 
   const busy = sending || llmStatus === "processing";
-  const userMessageCount = messages.filter((m) => m.role === "user").length;
-  const showChips = !complete && !busy && userMessageCount === 0;
+  const chipSource = complete ? COMPLETE_SUGGESTIONS : SUGGESTIONS[step];
+  const lastIsAssistant =
+    messages.length === 0 || messages[messages.length - 1]?.role === "assistant";
+  const showChips = !busy && lastIsAssistant;
   const composedError = sendError || llmError;
   const canRetry = Boolean(lastFailed) && !busy && status === "ready";
 
@@ -134,8 +156,8 @@ export function ChatPanel({
           </p>
           <p className="mt-1 text-sm text-[var(--ink-soft)]">
             {complete
-              ? "Your draft is ready — polish on the canvas, then export."
-              : STEP_HINTS[currentStep]}
+              ? "Draft ready — keep chatting to polish, edit the canvas, or export."
+              : STEP_HINTS[step]}
           </p>
         </div>
 
@@ -168,14 +190,16 @@ export function ChatPanel({
 
         {showChips && (
           <div className="flex flex-wrap gap-2 pt-1">
-            {SUGGESTIONS[currentStep].map((chip) => (
+            {chipSource.map((chip) => (
               <button
                 key={chip}
                 type="button"
                 onClick={() => setDraft(chip)}
                 className="suggestion-chip cursor-pointer"
               >
-                {chip === "done" || chip === "skip" ? chip : truncateChip(chip)}
+                {chip === "done" || chip === "skip" || chip === "looks good"
+                  ? chip
+                  : truncateChip(chip)}
               </button>
             ))}
           </div>
@@ -193,53 +217,62 @@ export function ChatPanel({
       </div>
 
       <div className="shrink-0 border-t border-[var(--line)]/70 bg-[var(--panel-elevated)]/90 px-3 py-3 backdrop-blur-md sm:px-4">
-        {complete ? (
-          <div className="ready-dock">
-            <p className="font-display text-base font-semibold text-[var(--ink)]">
-              Resume ready
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-[var(--ink-soft)]">
-              Fine-tune the canvas, download a PDF, or start a new session.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <DownloadPdfButton
-                resume={resume}
-                template={template}
-                photoUrl={templateSupportsPhoto(template) ? photoUrl : null}
-                variant="accent"
-              />
-              {onViewPreview && (
+        {complete && (
+          <div className="ready-dock mb-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-display text-base font-semibold text-[var(--ink)]">
+                  Resume ready
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--ink-soft)]">
+                  Download anytime — or keep chatting below to polish.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <DownloadPdfButton
+                  resume={resume}
+                  template={template}
+                  photoUrl={templateSupportsPhoto(template) ? photoUrl : null}
+                  variant="accent"
+                  size="sm"
+                />
+                {onViewPreview && (
+                  <button
+                    type="button"
+                    onClick={onViewPreview}
+                    className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-slate-50 lg:hidden"
+                  >
+                    Preview
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={onViewPreview}
-                  className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-slate-50 lg:hidden"
+                  onClick={() => onNewResume?.()}
+                  className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-slate-50"
                 >
-                  Open preview
+                  New
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => onNewResume?.()}
-                className="cursor-pointer rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-slate-50"
-              >
-                New resume
-              </button>
+              </div>
             </div>
           </div>
-        ) : (
-          <Composer
-            value={draft}
-            onChange={setDraft}
-            onSubmit={() => void submit(draft)}
-            placeholder={PLACEHOLDERS[currentStep]}
-            disabled={status !== "ready"}
-            busy={busy}
-            statusText={streamStatus || undefined}
-            error={composedError}
-            onRetry={canRetry ? retry : undefined}
-            retryLabel="Retry send"
-          />
         )}
+
+        <Composer
+          value={draft}
+          onChange={setDraft}
+          onSubmit={() => void submit(draft)}
+          placeholder={
+            complete
+              ? "e.g. Make my summary stronger for senior roles…"
+              : PLACEHOLDERS[step]
+          }
+          disabled={status !== "ready"}
+          busy={busy}
+          statusText={streamStatus || undefined}
+          error={composedError}
+          onRetry={canRetry ? retry : undefined}
+          retryLabel="Retry send"
+        />
       </div>
     </div>
   );

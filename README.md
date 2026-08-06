@@ -10,7 +10,7 @@ AI-assisted resume builder with a live document canvas. Chat to draft, edit on t
 | `/templates` | Template gallery (8 layouts) |
 | `/builder` | Split-screen coach + live A4 canvas |
 
-**Flow:** pick a template → guided chat (basics → experience → education) → hover-edit the canvas → download PDF. Sessions persist in the browser via `localStorage` (`session_id`); auth is planned for a later phase.
+**Flow:** pick a template → guided chat (basics → summary → skills → experience → education) → polish in chat or on the canvas → download PDF. Sessions persist in the browser via `localStorage` (`session_id`); sign in to claim drafts across devices.
 
 Optional profile photo on templates that support it. Template can be changed in-builder without losing content.
 

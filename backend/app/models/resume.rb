@@ -99,8 +99,6 @@ class Resume < ApplicationRecord
   def ensure_current_step
     legacy = {
       "personal_info" => "basics",
-      "summary" => "basics",
-      "skills" => "basics",
       "work_experience" => "experience"
     }
     self.current_step = legacy[current_step] if legacy.key?(current_step)

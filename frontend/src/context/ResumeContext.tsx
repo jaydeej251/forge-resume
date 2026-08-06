@@ -82,7 +82,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStep] = useState<ResumeStep>("basics");
   const [stepIndex, setStepIndex] = useState(0);
   const [stepLabel, setStepLabel] = useState("Basics");
-  const [totalSteps, setTotalSteps] = useState(3);
+  const [totalSteps, setTotalSteps] = useState(5);
   const [flowComplete, setFlowComplete] = useState(false);
   const [streamStatus, setStreamStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -223,7 +223,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setCurrentStep("basics");
     setStepIndex(0);
     setStepLabel("Basics");
-    setTotalSteps(3);
+    setTotalSteps(5);
     setFlowComplete(false);
     setStatus("idle");
     setError(null);

@@ -1,5 +1,7 @@
 export const RESUME_STEPS = [
   "basics",
+  "summary",
+  "skills",
   "experience",
   "education",
 ] as const;
@@ -8,14 +10,18 @@ export type ResumeStep = (typeof RESUME_STEPS)[number];
 
 export const STEP_LABELS: Record<ResumeStep, string> = {
   basics: "Basics",
+  summary: "Summary",
+  skills: "Skills",
   experience: "Experience",
   education: "Education",
 };
 
 export const STEP_HINTS: Record<ResumeStep, string> = {
-  basics: "Name, email, and target role — we'll draft summary & skills",
+  basics: "Name, email, and target role to start",
+  summary: "We'll draft a short summary — tweak it or say looks good",
+  skills: "Review suggested skills, then say looks good to continue",
   experience: "Paste a role — we'll expand it into ~5 bullets (3 key + 2 supporting)",
-  education: "Add education, or skip to finish",
+  education: "Add education, or skip to finish — you can keep chatting after",
 };
 
 export function isResumeStep(value: string): value is ResumeStep {
