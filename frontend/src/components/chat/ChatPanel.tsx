@@ -194,8 +194,9 @@ export function ChatPanel({
               <button
                 key={chip}
                 type="button"
-                onClick={() => setDraft(chip)}
-                className="suggestion-chip cursor-pointer"
+                disabled={busy || status !== "ready"}
+                onClick={() => void submit(chip)}
+                className="suggestion-chip cursor-pointer disabled:opacity-50"
               >
                 {chip === "done" || chip === "skip" || chip === "looks good"
                   ? chip
